@@ -16,8 +16,8 @@ app = FastAPI(
 # ==== CORS Middleware ====
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://cypress‑hide‑0280.typedream.app"],    
-    allow_credentials=True,  
+    allow_origins=["*"],         
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
