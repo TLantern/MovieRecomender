@@ -4,4 +4,3 @@ uvicorn[standard]==0.22.0
 openai==0.28.0
 python-dotenv==1.0.0
 requests==2.32.4
-fastapi-mail==1.4.1
