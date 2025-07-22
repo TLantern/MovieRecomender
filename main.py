@@ -1,30 +1,26 @@
 import os
 import json
+import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-import openai
-from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import openai
 
+# Load environment variables
 load_dotenv()
-# Load OpenAI API key from environment
+
+# Required API keys
 openai.api_key = os.getenv("OPENAI_API_KEY")
+tmdb_api_key = os.getenv("TMDB_API_KEY")
 if not openai.api_key:
     raise RuntimeError("OPENAI_API_KEY environment variable not set")
+if not tmdb_api_key:
+    raise RuntimeError("TMDB_API_KEY environment variable not set")
 
 app = FastAPI(
     title="Movie Recommendation API",
-    description="An API that recommends movies based on mood using OpenAI GPT-4",
-    version="1.0.0",
-)
-
-# Optional CORS settings
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Adjust in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    description="Recommends movies based on mood, enriched with real descriptions from TMDB.",
+    version="1.1.0",
 )
 
 # Request schema
@@ -47,41 +43,44 @@ async def recommend(request: MoodRequest):
     if not mood:
         raise HTTPException(status_code=400, detail="Mood must be a non-empty string")
 
+    # Step 1: GPT for titles & years
     prompt = (
-        f"You are a movie recommendation engine. Given the user's mood, provide exactly 3 "
-        f"movies in JSON array format. Mood: \"{mood}\".\n"
-        f"Return output as:\n"
-        f"{{ \"movies\": [{{ \"title\": \"...\", \"year\": ####, \"description\": \"...\" }}, ...] }}"
+        f"Provide exactly 3 movie recommendations for mood '{mood}'. "
+        f"Return only JSON: {{\"movies\":[{{\"title\":\"...\",\"year\":####}},...]}}"
     )
-
     try:
-        response = openai.ChatCompletion.create(
+        gpt_resp = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You provide movie recommendations in strict JSON."},
+                {"role": "system", "content": "Output strictly JSON with title and year."},
                 {"role": "user", "content": prompt},
             ],
             temperature=0.7,
-            max_tokens=500,
+            max_tokens=300,
         )
-        content = response.choices[0].message.content.strip()
-        data = json.loads(content)
-
+        data = json.loads(gpt_resp.choices[0].message.content)
         movies = data.get("movies")
         if not isinstance(movies, list) or len(movies) != 3:
-            raise ValueError("Invalid response format from OpenAI")
+            raise ValueError("GPT response invalid format")
 
-        validated = []
+        enriched = []
+        # Step 2: Fetch real descriptions from TMDB
         for m in movies:
             title = m.get("title")
             year = m.get("year")
-            description = m.get("description")
-            if not (isinstance(title, str) and isinstance(year, int) and isinstance(description, str)):
-                raise ValueError("Invalid movie entry format")
-            validated.append(Movie(title=title, year=year, description=description))
+            if not (isinstance(title, str) and isinstance(year, int)):
+                raise ValueError("Invalid movie entry")
 
-        return MovieResponse(movies=validated)
+            tmdb_search = requests.get(
+                "https://api.themoviedb.org/3/search/movie",
+                params={"api_key": tmdb_api_key, "query": title, "year": year}
+            ).json()
+            results = tmdb_search.get("results", [])
+            overview = results[0].get("overview") if results else "Description not available."
 
+            enriched.append(Movie(title=title, year=year, description=overview))
+
+        return MovieResponse(movies=enriched)
     except HTTPException:
         raise
     except Exception as e:
@@ -89,4 +88,11 @@ async def recommend(request: MoodRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    from pyngrok import ngrok
+
+    # start ngrok tunnel
+    public_url = ngrok.connect(8000)
+    print(f" * ngrok tunnel available at {public_url}")
+
+    # run FastAPI
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -8,15 +8,11 @@ This is a simple FastAPI service that provides movie recommendations based on us
 1. **Clone the repo**
    ```bash
    git clone https://github.com/yourusername/movie-recommender-api.git
-   cd movie-recommender-api
 
 2. **Start Backend**
-uvicorn main:app --reload
-
+uvicorn main:app --reload --env-file .env
 **Test EndPoint**
-curl -X POST "http://localhost:8000/recommend" \
-     -H "Content-Type: application/json" \
-     -d '{"mood": "adventurous"}
+curl -i -X POST http://127.0.0.1:8000/recommend \  -H "Content-Type: application/json" \  -d '{"mood":"sad and moody"}'
 
 3.**Deploy Vercel**
 vercel deploy
