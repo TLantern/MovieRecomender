@@ -1,98 +1,71 @@
 import os
-import json
-import requests
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import openai
 
-# Load environment variables
-load_dotenv()
-
-# Required API keys
+# Load your OpenAI key from .env or environment
 openai.api_key = os.getenv("OPENAI_API_KEY")
-tmdb_api_key = os.getenv("TMDB_API_KEY")
-if not openai.api_key:
-    raise RuntimeError("OPENAI_API_KEY environment variable not set")
-if not tmdb_api_key:
-    raise RuntimeError("TMDB_API_KEY environment variable not set")
 
 app = FastAPI(
-    title="Movie Recommendation API",
-    description="Recommends movies based on mood, enriched with real descriptions from TMDB.",
-    version="1.1.0",
+    title="Movie Recommender",
+    description="Paste your mood, get 3 niche movie picks",
+    version="1.0.0"
 )
 
-# Request schema
-class MoodRequest(BaseModel):
-    mood: str = Field(..., min_length=1, description="User's mood to get movie recommendations")
+# ==== CORS Middleware ====
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://cypress‑hide‑0280.typedream.app"],          # In prod, replace "*" with your domain(s)
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Movie schema
+# ==== Request & Response Models ====
+class MoodRequest(BaseModel):
+    mood: str
+
 class Movie(BaseModel):
     title: str
     year: int
     description: str
 
-# Response schema
-class MovieResponse(BaseModel):
+class RecommendResponse(BaseModel):
     movies: list[Movie]
 
-@app.post("/recommend", response_model=MovieResponse)
-async def recommend(request: MoodRequest):
-    mood = request.mood.strip()
-    if not mood:
+# ==== /recommend Endpoint ====
+@app.post("/recommend", response_model=RecommendResponse)
+async def recommend_movies(payload: MoodRequest):
+    if not payload.mood.strip():
         raise HTTPException(status_code=400, detail="Mood must be a non-empty string")
 
-    # Step 1: GPT for titles & years
-    prompt = (
-        f"Provide exactly 3 movie recommendations for mood '{mood}'. "
-        f"Return only JSON: {{\"movies\":[{{\"title\":\"...\",\"year\":####}},...]}}"
-    )
     try:
-        gpt_resp = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "Output strictly JSON with title and year."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.7,
-            max_tokens=300,
+        # Example GPT prompt; tweak for your “deep niche” needs
+        prompt = (
+            f"You are a movie curator. "
+            f"Suggest 3 movies that fit this mood: '{payload.mood}'. "
+            f"Try not to suggest mainstream movies first"
+            f"Return JSON array with title, year, and 2-sentence description."
         )
-        data = json.loads(gpt_resp.choices[0].message.content)
-        movies = data.get("movies")
-        if not isinstance(movies, list) or len(movies) != 3:
-            raise ValueError("GPT response invalid format")
 
-        enriched = []
-        # Step 2: Fetch real descriptions from TMDB
-        for m in movies:
-            title = m.get("title")
-            year = m.get("year")
-            if not (isinstance(title, str) and isinstance(year, int)):
-                raise ValueError("Invalid movie entry")
+        resp = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": "You suggest niche movie picks."},
+                      {"role": "user",   "content": prompt}],
+            temperature=0.8,
+            max_tokens=300
+        )
 
-            tmdb_search = requests.get(
-                "https://api.themoviedb.org/3/search/movie",
-                params={"api_key": tmdb_api_key, "query": title, "year": year}
-            ).json()
-            results = tmdb_search.get("results", [])
-            overview = results[0].get("overview") if results else "Description not available."
+        content = resp.choices[0].message.content.strip()
+        # Expecting something like: [{"title":..., "year":..., "description":...}, ...]
+        movies = openai.util.convert_to_dict(content)
 
-            enriched.append(Movie(title=title, year=year, description=overview))
+        return RecommendResponse(movies=movies)
 
-        return MovieResponse(movies=enriched)
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == "__main__":
-    import uvicorn
-    from pyngrok import ngrok
-
-    # start ngrok tunnel
-    public_url = ngrok.connect(8000)
-    print(f" * ngrok tunnel available at {public_url}")
-
-    # run FastAPI
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+# ==== Health Check (optional) ====
+@app.get("/health")
+async def health():
+    return {"status": "alive"}
