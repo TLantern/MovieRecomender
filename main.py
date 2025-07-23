@@ -78,7 +78,7 @@ async def recommend(req: RecommendRequest):
         "You are a seasoned cinephile and JSON-only API. "
         "Recommend exactly 3 hidden-gem movies — no blockbusters, no famous classics. "
         "Avoid repeating titles, especially if the user inputs similar moods. "
-        "Balance decades with both newer films and lesser-known ‘oldies but goodies’.\n\n"
+        "Balance decades with both newer films and lesser-known ‘oldies but goodies’."
         "CRITICAL RULES:\n"
         "- Output ONLY valid JSON, no commentary.\n"
         "- Use this exact JSON schema:\n"
@@ -89,7 +89,7 @@ async def recommend(req: RecommendRequest):
         "    { \"title\": \"string\", \"year\": number, \"description\": \"string\", \"stream_link\": \"string\" }\n"
         "  ]\n"
         "}\n"
-        "- stream_link: direct URL where the movie can be streamed (e.g., Netflix, AmazonPrime).\n"
+        "- stream_link: a link to a JustWatch or Rotten Tomatoes page for the movie, not a single platform.\n"
         "- Do NOT repeat past recommendations.\n"
         "- Align choices precisely with the user's mood.\n\n"
         f'User mood: "{req.mood}".'
