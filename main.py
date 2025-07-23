@@ -61,8 +61,13 @@ def enrich_with_tmdb(movie: dict) -> dict:
         movie.update({"rating_out_of_10": None, "stars": None, "source": "tmdb"})
         return movie
     best = results[0]
-    rating = best.get("vote_average")  # 0-10 scale
-    stars = round(rating / 2, 1) if rating is not None else None
+    raw = best.get("vote_average")  # 0-10 scale
+    if raw is not None:
+        rating = round(raw, 2)  # max 2 decimal places
+        stars = round(rating / 2, 1)  # one decimal place for stars
+    else:
+        rating = None
+        stars = None
     movie.update({"rating_out_of_10": rating, "stars": stars, "source": "tmdb"})
     return movie
 
@@ -74,14 +79,19 @@ async def recommend(req: RecommendRequest):
         "Recommend exactly 3 hidden-gem movies — no blockbusters, no famous classics. "
         "Avoid repeating titles, especially if the user inputs similar moods. "
         "Balance decades with both newer films and lesser-known ‘oldies but goodies’.\n\n"
-        "Output ONLY valid JSON in this exact format:\n"
+        "CRITICAL RULES:\n"
+        "- Output ONLY valid JSON, no commentary.\n"
+        "- Use this exact JSON schema:\n"
         "{\n"
         "  \"movies\": [\n"
-        "    { \"title\": \"string\", \"year\": number, \"description\": \"string\" },\n"
-        "    { \"title\": \"string\", \"year\": number, \"description\": \"string\" },\n"
-        "    { \"title\": \"string\", \"year\": number, \"description\": \"string\" }\n"
+        "    { \"title\": \"string\", \"year\": number, \"description\": \"string\", \"stream_link\": \"string\" },\n"
+        "    { \"title\": \"string\", \"year\": number, \"description\": \"string\", \"stream_link\": \"string\" },\n"
+        "    { \"title\": \"string\", \"year\": number, \"description\": \"string\", \"stream_link\": \"string\" }\n"
         "  ]\n"
         "}\n"
+        "- stream_link: direct URL where the movie can be streamed (e.g., Netflix, AmazonPrime).\n"
+        "- Do NOT repeat past recommendations.\n"
+        "- Align choices precisely with the user's mood.\n\n"
         f'User mood: "{req.mood}".'
     )
 
@@ -101,7 +111,7 @@ async def recommend(req: RecommendRequest):
     if not isinstance(movies, list):
         raise HTTPException(status_code=500, detail="`movies` is not a list")
 
-    # Enrich and return up to 3 recommendations
+    # Enrich with TMDB ratings and return up to 3 recommendations
     enriched = []
     for m in movies[:3]:
         enriched.append(enrich_with_tmdb(m))
