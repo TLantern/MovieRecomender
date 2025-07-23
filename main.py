@@ -1,17 +1,11 @@
-import os
 import json
 from json import JSONDecodeError
+import os
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from openai import ChatCompletion
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
-
-# Load environment variables (if using .env)
-# from dotenv import load_dotenv
-# load_dotenv()
 
 app = FastAPI()
 
@@ -29,30 +23,20 @@ class RecommendRequest(BaseModel):
     mood: str
 
 class EmailRequest(BaseModel):
-    email: EmailStr
+    email: str    # basic validation by Pydantic; use constr/email if stricter
 
-# Background task to forward email via SendGrid
-def send_forward_email(user_email: str):
+# Background task to save email locally
+def save_email_to_file(user_email: str):
     """
-    Fire-and-forget: use SendGrid to forward the signup email to the designated inbox.
+    Appends the user email to subscribers.txt in the working directory.
     """
-    sg_api_key = os.getenv("SENDGRID_API_KEY")
-    if not sg_api_key:
-        print("⚠️ SENDGRID_API_KEY not set, cannot send email.")
-        return
-
-    message = Mail(
-        from_email="no-reply@yourdomain.com",
-        to_emails="safeharbouragent@gmail.com",
-        subject="🎬 New Movie App Email Signup",
-        html_content=f"<p>New signup: {user_email}</p>"
-    )
     try:
-        sg = SendGridAPIClient(sg_api_key)
-        response = sg.send(message)
-        print(f"✅ SendGrid response: {response.status_code}")
+        os.makedirs("data", exist_ok=True)
+        path = os.path.join("data", "subscribers.txt")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(user_email + "\n")
     except Exception as e:
-        print(f"❌ SendGrid error: {e}")
+        print(f"❌ Failed to save email: {e}")
 
 # Endpoint: Recommend 3 movies based on mood
 @app.post("/recommend")
@@ -87,8 +71,9 @@ async def recommend(req: RecommendRequest):
 
     return {"movies": movies[:3]}
 
-# Endpoint: Collect and forward user email
+# Endpoint: Collect and save user email to file
 @app.post("/subscribe")
 async def subscribe(req: EmailRequest, bg: BackgroundTasks):
-    bg.add_task(send_forward_email, req.email)
-    return {"status": "ok", "message": "Thanks! We’ll be in touch."}
+    # Schedule saving email to file
+    bg.add_task(save_email_to_file, req.email)
+    return {"status": "ok", "message": "Got it! You’re on the list."}
