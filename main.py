@@ -77,3 +77,15 @@ async def subscribe(req: EmailRequest, bg: BackgroundTasks):
     # Schedule saving email to file
     bg.add_task(save_email_to_file, req.email)
     return {"status": "ok", "message": "Got it! You’re on the list."}
+
+# Endpoint: Retrieve subscribers list as plain text
+from fastapi.responses import FileResponse
+
+@app.get("/subscribers")
+async def get_subscribers():
+    """Return the raw subscribers.txt file."""
+    data_dir = os.path.join(os.getcwd(), "data")
+    path = os.path.join(data_dir, "subscribers.txt")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="No subscribers found yet.")
+    return FileResponse(path, media_type="text/plain", filename="subscribers.txt")
