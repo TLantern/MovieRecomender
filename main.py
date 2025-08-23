@@ -25,8 +25,13 @@ app.add_middleware(
 )
 
 # Request models
+class YearRange(BaseModel):
+    min: int
+    max: int
+
 class RecommendRequest(BaseModel):
     mood: str
+    yearRange: YearRange
 
 class EmailRequest(BaseModel):
     email: str    # basic validation by Pydantic; use constr/email if stricter
@@ -75,6 +80,7 @@ def enrich_with_tmdb(movie: dict) -> dict:
 @app.post("/recommend")
 async def recommend(req: RecommendRequest):
     prompt = (
+<<<<<<< HEAD
         "You are a seasoned cinephile and JSON-only API. "
         "Recommend exactly 3 hidden-gem movies — no blockbusters, no famous classics. "
         "Avoid repeating titles, especially if the user inputs similar moods. "
@@ -93,6 +99,20 @@ async def recommend(req: RecommendRequest):
         "- Do NOT repeat past recommendations.\n"
         "- Align choices precisely with the user's mood.\n\n"
         f'User mood: "{req.mood}".'
+=======
+        "You are a cinephile who ONLY returns valid JSON. "
+        "Recommend exactly 3 hidden-gem movies (no blockbusters, no classics). "
+        "Output exactly in THIS format and NOTHING else:\n"
+        '{ "movies": [ '
+        '{ "title": "string", "year": number, "description": "string" }, '
+        '{ "title": "string", "year": number, "description": "string" }, '
+        '{ "title": "string", "year": number, "description": "string" } '
+        '] }\n'
+        f"User mood: \"{req.mood}\". "
+        f"CRITICAL: You MUST ONLY recommend movies from years {req.yearRange.min} to {req.yearRange.max}. "
+        f"This is a STRICT requirement - if a movie's year is outside this range, DO NOT include it. "
+        f"Double-check each movie's year before including it."
+>>>>>>> b9658ba (V0.1)
     )
 
     resp = ChatCompletion.create(

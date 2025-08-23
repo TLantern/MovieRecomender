@@ -25,9 +25,23 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased relative`}
+        style={{
+          backgroundImage: 'url(/background.jpeg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+          backgroundRepeat: 'no-repeat',
+          minHeight: '100vh'
+        }}
       >
-        {children}
+        <div 
+          className="fixed inset-0 bg-black/40 pointer-events-none z-0"
+          style={{ zIndex: 0 }}
+        ></div>
+        <div className="relative z-10">
+          {children}
+        </div>
       </body>
     </html>
   );
