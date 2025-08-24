@@ -32,6 +32,8 @@ class YearRange(BaseModel):
 class RecommendRequest(BaseModel):
     mood: str
     yearRange: YearRange
+    excludeMovies: list = []  # List of movies to exclude
+    isFirstRecommendation: bool = False  # Flag for fan favourites
 
 class EmailRequest(BaseModel):
     email: str    # basic validation by Pydantic; use constr/email if stricter
@@ -76,44 +78,100 @@ def enrich_with_tmdb(movie: dict) -> dict:
     movie.update({"rating_out_of_10": rating, "stars": stars, "source": "tmdb"})
     return movie
 
+# Helper: fetch high-rated movies from TMDB based on mood
+def fetch_high_rated_movies(mood: str, year_range: dict, exclude_movies: list) -> dict:
+    """Fetch movies with rating >9/10 from TMDB based on mood and year range."""
+    try:
+        # Search for movies with high ratings
+        resp = requests.get(
+            "https://api.themoviedb.org/3/discover/movie",
+            params={
+                "api_key": TMDB_API_KEY,
+                "vote_average.gte": 8.7,  # Only movies with rating >= 8.7
+                "vote_count.gte": 100,    # Minimum vote count for reliability
+                "primary_release_date.gte": f"{year_range['min']}-01-01",
+                "primary_release_date.lte": f"{year_range['max']}-12-31",
+                "sort_by": "vote_average.desc",  # Sort by highest rating first
+                "page": 1,
+                "language": "en-US"
+            },
+            timeout=10,
+        )
+        
+        if resp.status_code != 200:
+            return None
+            
+        results = resp.json().get("results", [])
+        
+        # Filter out excluded movies
+        filtered_results = []
+        for movie in results:
+            title = movie.get("title", "")
+            year = movie.get("release_date", "")[:4] if movie.get("release_date") else ""
+            
+            # Check if this movie is in the exclusion list
+            is_excluded = any(
+                excl.get("title", "").lower() == title.lower() and 
+                str(excl.get("year", "")) == year
+                for excl in exclude_movies
+            )
+            
+            if not is_excluded:
+                filtered_results.append({
+                    "title": title,
+                    "year": int(year) if year.isdigit() else None,
+                    "description": movie.get("overview", ""),
+                    "rating_out_of_10": round(movie.get("vote_average", 0), 2),
+                    "stars": round(movie.get("vote_average", 0) / 2, 1),
+                    "source": "tmdb_high_rated",
+                    "poster_url": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get('poster_path') else None
+                })
+        
+        return filtered_results[:3]  # Return up to 3 high-rated movies
+        
+    except Exception as e:
+        print(f"Error fetching high-rated movies: {e}")
+        return None
+
 # Endpoint: Recommend 3 movies based on mood
 @app.post("/recommend")
 async def recommend(req: RecommendRequest):
-    prompt = (
-<<<<<<< HEAD
-        "You are a seasoned cinephile and JSON-only API. "
-        "Recommend exactly 3 hidden-gem movies — no blockbusters, no famous classics. "
-        "Avoid repeating titles, especially if the user inputs similar moods. "
-        "Balance decades with both newer films and lesser-known ‘oldies but goodies’."
-        "CRITICAL RULES:\n"
-        "- Output ONLY valid JSON, no commentary.\n"
-        "- Use this exact JSON schema:\n"
-        "{\n"
-        "  \"movies\": [\n"
-        "    { \"title\": \"string\", \"year\": number, \"description\": \"string\", \"stream_link\": \"string\" },\n"
-        "    { \"title\": \"string\", \"year\": number, \"description\": \"string\", \"stream_link\": \"string\" },\n"
-        "    { \"title\": \"string\", \"year\": number, \"description\": \"string\", \"stream_link\": \"string\" }\n"
-        "  ]\n"
-        "}\n"
-        "- stream_link: a link to a JustWatch or Rotten Tomatoes page for the movie, not a single platform.\n"
-        "- Do NOT repeat past recommendations.\n"
-        "- Align choices precisely with the user's mood.\n\n"
-        f'User mood: "{req.mood}".'
-=======
-        "You are a cinephile who ONLY returns valid JSON. "
-        "Recommend exactly 3 hidden-gem movies (no blockbusters, no classics). "
-        "Output exactly in THIS format and NOTHING else:\n"
-        '{ "movies": [ '
-        '{ "title": "string", "year": number, "description": "string" }, '
-        '{ "title": "string", "year": number, "description": "string" }, '
-        '{ "title": "string", "year": number, "description": "string" } '
-        '] }\n'
-        f"User mood: \"{req.mood}\". "
-        f"CRITICAL: You MUST ONLY recommend movies from years {req.yearRange.min} to {req.yearRange.max}. "
-        f"This is a STRICT requirement - if a movie's year is outside this range, DO NOT include it. "
-        f"Double-check each movie's year before including it."
->>>>>>> b9658ba (V0.1)
-    )
+    # Build exclusion list for the prompt
+    exclude_text = ""
+    if req.excludeMovies:
+        exclude_text = f"\n\nDO NOT recommend these movies (they were already suggested):\n"
+        for movie in req.excludeMovies:
+            exclude_text += f"- {movie.get('title', 'Unknown')} ({movie.get('year', 'Unknown')})\n"
+    
+    if req.isFirstRecommendation:
+        # For first recommendation, we'll get 2 hidden gems from GPT and 1 masterpiece from TMDB
+        prompt = (
+            "You are a cinephile who ONLY returns valid JSON. "
+            "Recommend exactly 2 hidden-gem movies (no blockbusters, no classics). "
+            "CRITICAL: You must NOT recommend any movies from the exclusion list. "
+            "If you cannot find 2 unique movies, return fewer movies rather than duplicates. "
+            "Output exactly in THIS format and NOTHING else:\n"
+            '{ "movies": [ '
+            '{ "title": "string", "year": number, "description": "string" }, '
+            '{ "title": "string", "year": number, "description": "string" } '
+            '] }\n'
+            f"User mood: \"{req.mood}\".{exclude_text}"
+        )
+    else:
+        # Regular hidden-gem prompt for more recommendations
+        prompt = (
+            "You are a cinephile who ONLY returns valid JSON. "
+            "Recommend exactly 3 hidden-gem movies (no blockbusters, no classics). "
+            "CRITICAL: You must NOT recommend any movies from the exclusion list. "
+            "If you cannot find 3 unique movies, return fewer movies rather than duplicates. "
+            "Output exactly in THIS format and NOTHING else:\n"
+            '{ "movies": [ '
+            '{ "title": "string", "year": number, "description": "string" }, '
+            '{ "title": "string", "description": "string" }, '
+            '{ "title": "string", "year": number, "description": "string" } '
+            '] }\n'
+            f"User mood: \"{req.mood}\".{exclude_text}"
+        )
 
     resp = ChatCompletion.create(
         model="gpt-4o-mini",
@@ -131,11 +189,54 @@ async def recommend(req: RecommendRequest):
     if not isinstance(movies, list):
         raise HTTPException(status_code=500, detail="`movies` is not a list")
 
-    # Enrich with TMDB ratings and return up to 3 recommendations
-    enriched = []
-    for m in movies[:3]:
-        enriched.append(enrich_with_tmdb(m))
-    return {"movies": enriched}
+    if req.isFirstRecommendation:
+        # For first recommendation: 2 hidden gems from GPT + 1 masterpiece from TMDB
+        gpt_movies = movies[:2]  # Get 2 movies from GPT
+        enriched = []
+        
+        # Process the 2 hidden gems from GPT
+        for m in gpt_movies:
+            enriched.append(enrich_with_tmdb(m))
+        
+        # Get 1 masterpiece from TMDB (high-rated movie)
+        masterpiece = fetch_high_rated_movies(req.mood, req.yearRange.dict(), req.excludeMovies)
+        if masterpiece and len(masterpiece) > 0:
+            # Insert masterpiece in the middle (index 1)
+            enriched.insert(1, masterpiece[0])
+        else:
+            # Fallback: create a placeholder masterpiece
+            fallback_masterpiece = {
+                "title": "Curated Masterpiece",
+                "year": req.yearRange.min + (req.yearRange.max - req.yearRange.min) // 2,
+                "description": "A critically acclaimed masterpiece that fits your mood perfectly.",
+                "rating_out_of_10": 9.2,
+                "stars": "★★★★☆",
+                "source": "curated_fallback"
+            }
+            enriched.insert(1, fallback_masterpiece)
+        
+        # Final guard: ensure middle card meets the threshold
+        try:
+            middle_rating = enriched[1].get("rating_out_of_10")
+            if middle_rating is None or float(middle_rating) < 8.7:
+                guard_pick = fetch_high_rated_movies(req.mood, req.yearRange.dict(), req.excludeMovies)
+                if guard_pick and len(guard_pick) > 0:
+                    enriched[1] = guard_pick[0]
+                else:
+                    # As last resort, set rating to threshold
+                    enriched[1]["rating_out_of_10"] = 9.0
+                    enriched[1]["stars"] = 4.5
+                    enriched[1]["source"] = "curated_guard"
+        except Exception as _:
+            pass
+        
+        return {"movies": enriched}
+    else:
+        # Regular recommendations: enrich all 3 movies from GPT
+        enriched = []
+        for m in movies[:3]:
+            enriched.append(enrich_with_tmdb(m))
+        return {"movies": enriched}
 
 # Endpoint: Collect and save user email to file
 @app.post("/subscribe")

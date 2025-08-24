@@ -35,7 +35,7 @@ export default function MoviePoster({ src, alt, priority = false }: MoviePosterP
       />
       {isLoading && (
         <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
-          <div className="text-gray-400 text-sm">Loading...</div>
+          <div className="text-gray-400 text-sm font-body">Loading...</div>
         </div>
       )}
     </div>

@@ -130,7 +130,9 @@ export default function SearchBar({ onSearch, loading = false }: SearchBarProps)
                     {/* Year Range Slider */}
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-medium text-gray-300 whitespace-nowrap">1970s</h2>
+          <h2 className="text-sm font-light text-gray-300 whitespace-nowrap min-w-[50px] text-center font-body">
+            {yearRange[0]}
+          </h2>
           <Slider
             value={yearRange}
             onValueChange={(value) => setYearRange(value as [number, number])}
@@ -139,7 +141,9 @@ export default function SearchBar({ onSearch, loading = false }: SearchBarProps)
             step={1}
             className="flex-1" 
           />
-          <h2 className="text-sm font-medium text-gray-300 whitespace-nowrap">2020s</h2>
+          <h2 className="text-sm font-light text-gray-300 whitespace-nowrap min-w-[50px] text-center font-body">
+            {yearRange[1]}
+          </h2>
         </div>
       </div>
     </div>

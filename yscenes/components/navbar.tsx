@@ -12,7 +12,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50">
+    <nav className="relative z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16">
           {/* Logo/Brand - Absolute positioned to not affect layout */}
@@ -22,11 +22,11 @@ export default function Navbar() {
               <Image
                 src="/movie.png"
                 alt="YScenes"
-                width={48}
-                height={48}
-                className="rounded-full w-[var(--size)] h-[var(--size)] shrink-0 transition-transform duration-700 ease-in-out group-hover:rotate-360"
+                width={38}
+                height={38}
+                className="rounded-full w-[var(--size)] h-[var(--size)] shrink-0 transition-transform duration-700 ease-in-out group-hover:rotate-360 mt-4 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
               />
-              <span className="whitespace-nowrap text-white font-semibold text-xl translate-x-3 opacity-0 transition duration-600 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 ml-[var(--gap)] relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-300 group-hover:after:w-full group-focus-visible:after:w-full">
+              <span className="whitespace-nowrap text-white font-semibold text-xl translate-x-3 opacity-0 transition duration-600 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 ml-[var(--gap)] relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-300 group-hover:after:w-full group-focus-visible:after:w-full font-heading">
                 YScenes
               </span>
             </Link>
@@ -37,25 +37,25 @@ export default function Navbar() {
             <div className="flex items-baseline space-x-8">
               <Link 
                 href="/" 
-                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105"
+                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
               >
                 Home
               </Link>
               <Link 
                 href="/movies" 
-                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105"
+                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
               >
                 Movies
               </Link>
               <Link 
                 href="/recommendations" 
-                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105"
+                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
               >
                 Recommendations
               </Link>
               <Link 
                 href="/about" 
-                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105"
+                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
               >
                 About
               </Link>
@@ -112,28 +112,28 @@ export default function Navbar() {
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-black/80 backdrop-blur-md">
           <Link 
             href="/" 
-            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105"
+            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             onClick={() => setIsMenuOpen(false)}
           >
             Home
           </Link>
           <Link 
             href="/movies" 
-            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105"
+            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             onClick={() => setIsMenuOpen(false)}
           >
             Movies
           </Link>
           <Link 
             href="/recommendations" 
-            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105"
+            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             onClick={() => setIsMenuOpen(false)}
           >
             Recommendations
           </Link>
           <Link 
             href="/about" 
-            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105"
+            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             onClick={() => setIsMenuOpen(false)}
           >
             About

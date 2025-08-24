@@ -13,8 +13,6 @@ function Slider({
   max = 100,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root>) {
-  const [isHovering, setIsHovering] = React.useState(false);
-  
   const _values = React.useMemo(
     () =>
       Array.isArray(value)
@@ -24,20 +22,6 @@ function Slider({
           : [min, max],
     [value, defaultValue, min, max]
   )
-
-  // Calculate position for the bubble
-  const getBubblePosition = () => {
-    if (_values.length === 2) {
-      const range = max - min;
-      const startPercent = ((_values[0] - min) / range) * 100;
-      const endPercent = ((_values[1] - min) / range) * 100;
-      const centerPercent = (startPercent + endPercent) / 2;
-      return Math.max(5, Math.min(95, centerPercent));
-    }
-    return 50;
-  };
-
-  const bubblePosition = getBubblePosition();
 
   return (
     <SliderPrimitive.Root
@@ -50,21 +34,10 @@ function Slider({
         "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col group",
         className
       )}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+
       {...props}
     >
-      {/* Year Range Bubble */}
-      <div 
-        className={`absolute -top-12 transform -translate-x-1/2 bg-white text-black px-3 py-1.5 rounded-lg shadow-lg border border-gray-200 text-sm font-medium whitespace-nowrap z-10 transition-opacity duration-200 ${
-          isHovering ? 'opacity-100' : 'opacity-0'
-        }`}
-        style={{ left: `${bubblePosition}%` }}
-      >
-        {_values.length === 2 ? `${_values[0]} - ${_values[1]}` : _values[0]}
-        {/* Inverted triangle pointer */}
-        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-      </div>
+
 
       <SliderPrimitive.Track
         data-slot="slider-track"

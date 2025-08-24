@@ -58,7 +58,7 @@ export default function Carousel({ movies, title }: CarouselProps) {
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-8">
       {title && (
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center font-heading">
           {title}
         </h2>
       )}
@@ -95,22 +95,22 @@ export default function Carousel({ movies, title }: CarouselProps) {
                   
                   {/* Movie Info */}
                   <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                    <h3 className="text-lg font-semibold mb-1 truncate">
+                    <h3 className="text-lg font-semibold mb-1 truncate font-heading">
                       {movie.title}
                     </h3>
                     <div className="flex items-center justify-between text-sm">
                       {movie.year && (
-                        <span className="text-gray-300">{movie.year}</span>
+                        <span className="text-gray-300 font-body">{movie.year}</span>
                       )}
                       {movie.rating && (
                         <div className="flex items-center">
                           <span className="text-yellow-400 mr-1">★</span>
-                          <span>{movie.rating}</span>
+                          <span className="font-body">{movie.rating}</span>
                         </div>
                       )}
                     </div>
                     {movie.genre && (
-                      <p className="text-xs text-gray-300 mt-1 truncate">
+                      <p className="text-xs text-gray-300 mt-1 truncate font-body">
                         {movie.genre}
                       </p>
                     )}
