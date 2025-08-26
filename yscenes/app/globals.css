@@ -151,9 +151,7 @@
 
 /* From Uiverse.io by terenceodonoghue */
 .loading-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
+  position: relative;
   border-radius: 50%;
   height: 48px;
   width: 48px;

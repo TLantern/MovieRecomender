@@ -247,7 +247,7 @@ export default function Home() {
             {searchLoading ? (
               <div className="text-center py-8">
                 {/* From Uiverse.io by terenceodonoghue */}
-                <div className="relative mx-auto mb-6" style={{ height: '48px', width: '48px' }}>
+                <div className="flex items-center justify-center mb-6" style={{ height: '48px', width: '48px' }}>
                   <div className="loading-spinner"></div>
                 </div>
                 <p className="text-white text-lg font-body">Finding your Perfect Movie</p>

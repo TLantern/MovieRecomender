@@ -1,9 +1,15 @@
 {
   "version": 2,
   "builds": [
-    { "src": "main.py", "use": "@vercel/python" }
+    {
+      "src": "yscenes/package.json",
+      "use": "@vercel/next"
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "main.py" }
+    {
+      "src": "/(.*)",
+      "dest": "/yscenes/$1"
+    }
   ]
-}
+} 
