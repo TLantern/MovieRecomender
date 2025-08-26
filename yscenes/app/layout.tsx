@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Montserrat, Inter } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -25,26 +26,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${montserrat.variable} ${inter.variable} antialiased relative`}
-        style={{
-          backgroundImage: 'url(/background.jpeg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
-          backgroundRepeat: 'no-repeat',
-          minHeight: '100vh'
-        }}
-      >
-        <div 
-          className="fixed inset-0 bg-black/40 pointer-events-none z-0"
-          style={{ zIndex: 0 }}
-        ></div>
-        <div className="relative z-10">
-          {children}
-        </div>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body
+          className={`${montserrat.variable} ${inter.variable} antialiased relative`}
+          style={{
+            backgroundImage: 'url(/background.jpeg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
+            backgroundRepeat: 'no-repeat',
+            minHeight: '100vh'
+          }}
+        >
+          <div 
+            className="fixed inset-0 bg-black/40 pointer-events-none z-0"
+            style={{ zIndex: 0 }}
+          ></div>
+          <div className="relative z-10">
+            {children}
+          </div>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 // import Carousel from '../components/carousel';
 import Navbar from '../components/navbar';
 import SearchBar from '../components/search-bar';
+import Bookmark from '../components/bookmark';
 // import { useMovies } from '../hooks/useMovies';
 
 interface MovieResult {
@@ -26,6 +27,7 @@ export default function Home() {
   const [moreLoading, setMoreLoading] = useState(false);
   const [currentMood, setCurrentMood] = useState('');
   const [currentYearRange, setCurrentYearRange] = useState<[number, number]>([1970, 2025]);
+  const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
 
   const handleSearch = async (mood: string, yearRange: [number, number]) => {
     setSearchLoading(true);
@@ -96,6 +98,13 @@ export default function Home() {
     } finally {
       setMoreLoading(false);
     }
+  };
+
+  const handleBookmarkToggle = (movieId: string, isBookmarked: boolean) => {
+    setBookmarks(prev => ({
+      ...prev,
+      [movieId]: isBookmarked
+    }));
   };
 
   const handleBottomEmailSubmit = async () => {
@@ -278,6 +287,15 @@ export default function Home() {
                           </div>
                         </div>
                       )}
+                      
+                      {/* Bookmark - Top left corner */}
+                      <div className="absolute top-3 left-3 z-20">
+                        <Bookmark
+                          movieId={`${movie.title}-${movie.year}`}
+                          isBookmarked={bookmarks[`${movie.title}-${movie.year}`] || false}
+                          onToggle={handleBookmarkToggle}
+                        />
+                      </div>
                       
                       <div className="relative z-10 h-full flex flex-col">
                       {/* Rating at the top */}

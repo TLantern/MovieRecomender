@@ -95,6 +95,8 @@ def enrich_with_tmdb(movie: dict) -> dict:
 def fetch_high_rated_movies(mood: str, year_range: dict, exclude_movies: list) -> dict:
     """Fetch movies with rating >9/10 from TMDB based on mood and year range."""
     try:
+        import random
+
         # Search for movies with high ratings
         resp = requests.get(
             "https://api.themoviedb.org/3/discover/movie",
@@ -140,11 +142,16 @@ def fetch_high_rated_movies(mood: str, year_range: dict, exclude_movies: list) -
                     "poster_url": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get('poster_path') else None
                 })
         
-        return filtered_results[:3]  # Return up to 3 high-rated movies
+        # Shuffle results for variety and return up to 3 movies
+        if filtered_results:
+            random.shuffle(filtered_results)
+            return filtered_results[:3]
+        return None
         
     except Exception as e:
         print(f"Error fetching high-rated movies: {e}")
         return None
+
 
 # Endpoint: Recommend 3 movies based on mood
 @app.post("/recommend")
@@ -189,7 +196,8 @@ async def recommend(req: RecommendRequest):
     resp = ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
+        top_p=0.7,      # More diverse token selection
+        temperature=0.9,  # Higher temperature for more variety
     )
     content = resp.choices[0].message.content
 
@@ -203,30 +211,45 @@ async def recommend(req: RecommendRequest):
         raise HTTPException(status_code=500, detail="`movies` is not a list")
 
     if req.isFirstRecommendation:
-        # For first recommendation: 2 hidden gems from GPT + 1 masterpiece from TMDB
-        gpt_movies = movies[:2]  # Get 2 movies from GPT
+        # For first recommendation: Get all 3 movies from GPT, then pick the best for masterpiece
+        gpt_movies = movies[:3]  # Get all 3 movies from GPT
         enriched = []
         
-        # Process the 2 hidden gems from GPT
+        # Process all 3 movies from GPT first
         for m in gpt_movies:
             enriched.append(enrich_with_tmdb(m))
         
-        # Get 1 masterpiece from TMDB (high-rated movie)
-        masterpiece = fetch_high_rated_movies(req.mood, req.yearRange.dict(), req.excludeMovies)
-        if masterpiece and len(masterpiece) > 0:
-            # Insert masterpiece in the middle (index 1)
-            enriched.insert(1, masterpiece[0])
-        else:
-            # Fallback: create a placeholder masterpiece
-            fallback_masterpiece = {
-                "title": "Curated Masterpiece",
-                "year": req.yearRange.min + (req.yearRange.max - req.yearRange.min) // 2,
-                "description": "A critically acclaimed masterpiece that fits your mood perfectly.",
-                "rating_out_of_10": 9.2,
-                "stars": "★★★★☆",
-                "source": "curated_fallback"
-            }
-            enriched.insert(1, fallback_masterpiece)
+        # Find the best movie from GPT results (rating 8.0+) for the masterpiece position
+        best_movie = None
+        best_rating = 0
+        
+        for movie in enriched:
+            rating = movie.get("rating_out_of_10", 0)
+            if rating and rating >= 8.0:
+                if rating > best_rating:
+                    best_rating = rating
+                    best_movie = movie
+        
+        # If no movie meets the 8.0 threshold, try TMDB
+        if not best_movie:
+            masterpiece = fetch_high_rated_movies(req.mood, req.yearRange.dict(), req.excludeMovies)
+            if masterpiece and len(masterpiece) > 0:
+                best_movie = masterpiece[0]
+        
+        # If still no masterpiece, use the highest rated GPT movie (even if < 8.0)
+        if not best_movie:
+            for movie in enriched:
+                rating = movie.get("rating_out_of_10", 0)
+                if rating and rating > best_rating:
+                    best_rating = rating
+                    best_movie = movie
+        
+        # Remove the best movie from the list and insert it in the middle
+        if best_movie in enriched:
+            enriched.remove(best_movie)
+        
+        # Insert masterpiece in the middle (index 1)
+        enriched.insert(1, best_movie)
         
         # Final guard: ensure middle card meets the threshold
         try:

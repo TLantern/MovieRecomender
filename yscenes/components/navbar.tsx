@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -31,6 +32,8 @@ export default function Navbar() {
               </span>
             </Link>
           </div>
+
+
 
           {/* Desktop Navigation - Centered */}
           <div className="hidden md:flex flex-1 justify-center items-center">
@@ -61,6 +64,34 @@ export default function Navbar() {
               </Link>
             </div>
           </div>
+
+          {/* Clerk Authentication Buttons - Right side */}
+          <div className="absolute right-20 sm:right-24 lg:right-28">
+            <SignedOut>
+              <SignUpButton mode="modal">
+                <button className="inline-flex items-center overflow-hidden rounded-full bg-black/70 backdrop-blur [--size:48px] [--pad:6px] [--gap:10px] px-[var(--pad)] py-[var(--pad)] w-[calc(var(--size)+var(--pad)*2)] transition-[width] duration-300 ease-out focus-visible:outline-none hover:w-max focus-visible:w-max">
+                  <svg className="w-[var(--size)] h-[var(--size)] shrink-0 transition-transform duration-700 ease-in-out group-hover:rotate-360 mt-4 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="whitespace-nowrap text-white font-semibold text-xl translate-x-3 opacity-0 transition duration-600 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 ml-[var(--gap)] relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-300 group-hover:after:w-full group-focus-visible:after:w-full font-heading">
+                    Sign Up
+                  </span>
+                </button>
+              </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton 
+                appearance={{
+                  elements: {
+                    avatarBox: "w-10 h-10",
+                    userButtonPopoverCard: "bg-black/90 backdrop-blur-sm border border-white/30"
+                  }
+                }}
+              />
+            </SignedIn>
+          </div>
+
+
 
           {/* Mobile menu button - Right side */}
           <div className="md:hidden">
@@ -142,4 +173,4 @@ export default function Navbar() {
       </div>
     </nav>
   );
-}
+} 
