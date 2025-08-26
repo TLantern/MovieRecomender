@@ -246,11 +246,11 @@ export default function Home() {
           <div className="container mx-auto px-4 max-w-6xl">
             {searchLoading ? (
               <div className="text-center py-8">
-                {/* From Uiverse.io by terenceodonoghue */}
-                <div className="flex items-center justify-center mb-6" style={{ height: '48px', width: '48px' }}>
-                  <div className="loading-spinner"></div>
-                </div>
+                {/* From Uiverse.io by Donewenfu */}
                 <p className="text-white text-lg font-body">Finding your Perfect Movie</p>
+                <div className="loader mt-4">
+                  <div className="jimu-primary-loading"></div>
+                </div>
               </div>
             ) : searchResults.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

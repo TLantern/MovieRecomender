@@ -2,18 +2,31 @@ import json
 from json import JSONDecodeError
 import os
 import requests
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import ChatCompletion
 
+# Load environment variables from .env file
+load_dotenv()
+
 app = FastAPI()
 
-# Load TMDB API key from environment
+# Load API keys from environment
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 if not TMDB_API_KEY:
     raise RuntimeError("TMDB_API_KEY environment variable is required")
+
+if not OPENAI_API_KEY:
+    raise RuntimeError("OPENAI_API_KEY environment variable is required")
+
+# Set OpenAI API key for the library
+import openai
+openai.api_key = OPENAI_API_KEY
 
 # CORS settings
 app.add_middleware(

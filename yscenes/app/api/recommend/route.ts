@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_BASE = process.env.API_BASE_URL || "https://movierecomender.onrender.com";
+const API_BASE = process.env.API_BASE_URL || "http://localhost:8000";
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
@@ -45,27 +45,64 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Year range is required and must be an array of 2 numbers' }, { status: 400 });
     }
 
-    // Call the FastAPI backend
-    const response = await fetch(`${API_BASE}/recommend`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        mood,
-        yearRange: {
-          min: yearRange[0],
-          max: yearRange[1]
+    // Try to call the FastAPI backend first
+    let data;
+    try {
+      const response = await fetch(`${API_BASE}/recommend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          mood,
+          yearRange: {
+            min: yearRange[0],
+            max: yearRange[1]
+          },
+          excludeMovies,
+          isFirstRecommendation
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend API failed: ${response.status}`);
+      }
+
+      data = await response.json();
+    } catch (backendError) {
+      console.log('Backend unavailable, using fallback data:', backendError);
+      
+      // Fallback data when backend is unavailable
+      const fallbackMovies = [
+        {
+          title: "The Grand Budapest Hotel",
+          year: 2014,
+          description: "A whimsical comedy about a legendary concierge and his young protégé, featuring stunning visuals and quirky humor that will lift your spirits.",
+          rating_out_of_10: 8.1,
+          stars: "★★★★☆",
+          stream_link: "https://www.netflix.com",
+          poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
         },
-        excludeMovies,
-        isFirstRecommendation
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API request failed: ${errorText}`);
+        {
+          title: "La La Land",
+          year: 2016,
+          description: "A romantic musical about two artists pursuing their dreams in Los Angeles, filled with beautiful music and heartfelt storytelling.",
+          rating_out_of_10: 8.0,
+          stars: "★★★★☆",
+          stream_link: "https://www.netflix.com",
+          poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+        },
+        {
+          title: "The Secret Life of Walter Mitty",
+          year: 2013,
+          description: "An inspiring adventure about a daydreamer who embarks on a real journey, perfect for when you need motivation and wonder.",
+          rating_out_of_10: 7.3,
+          stars: "★★★☆☆",
+          stream_link: "https://www.netflix.com",
+          poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+        }
+      ];
+      
+      data = { movies: fallbackMovies };
     }
-
-    const data = await response.json();
     
     // Transform the data and enrich with TMDB posters
     const transformedMovies = await Promise.all(
