@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { recommendationLogger } from '../../../utils/logger';
 
 const API_BASE = process.env.API_BASE_URL || "http://localhost:8000";
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
@@ -62,6 +63,9 @@ export async function POST(request: NextRequest) {
 
     // Try to call the FastAPI backend first
     let data;
+    let backendAvailable = true;
+    let source: 'backend' | 'fallback' = 'backend';
+    
     try {
       const response = await fetch(`${API_BASE}/recommend`, {
         method: "POST",
@@ -85,6 +89,8 @@ export async function POST(request: NextRequest) {
       data = await response.json();
     } catch (backendError) {
       console.log('Backend unavailable, using fallback data:', backendError);
+      backendAvailable = false;
+      source = 'fallback';
       
       // Fallback data when backend is unavailable
       // Use session seed to randomize fallback data
@@ -139,6 +145,16 @@ export async function POST(request: NextRequest) {
           poster_url: posterUrl || 'https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop' // TMDB poster URL or fallback image
         };
       })
+    );
+
+    // Log the recommendation results
+    await recommendationLogger.logRecommendation(
+      mood,
+      yearRange as [number, number],
+      transformedMovies,
+      sessionId,
+      backendAvailable,
+      source
     );
 
     return NextResponse.json({ 
