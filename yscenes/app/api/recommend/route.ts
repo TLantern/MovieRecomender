@@ -4,6 +4,17 @@ const API_BASE = process.env.API_BASE_URL || "http://localhost:8000";
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
+// Helper function to generate consistent hash from string
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
+
 // Helper function to fetch poster URL from TMDB
 async function getTMDBPoster(title: string, year: number): Promise<string | null> {
   if (!TMDB_API_KEY) return null;
@@ -35,7 +46,7 @@ async function getTMDBPoster(title: string, year: number): Promise<string | null
 
 export async function POST(request: NextRequest) {
   try {
-    const { mood, yearRange, excludeMovies = [], isFirstRecommendation = false } = await request.json();
+    const { mood, yearRange, excludeMovies = [], isFirstRecommendation = false, sessionId } = await request.json();
 
     if (!mood) {
       return NextResponse.json({ error: 'Mood is required' }, { status: 400 });
@@ -44,6 +55,10 @@ export async function POST(request: NextRequest) {
     if (!yearRange || !Array.isArray(yearRange) || yearRange.length !== 2) {
       return NextResponse.json({ error: 'Year range is required and must be an array of 2 numbers' }, { status: 400 });
     }
+
+    // Generate session-specific randomization seed
+    const sessionSeed = sessionId ? hashString(sessionId) : Date.now();
+    const randomOffset = (sessionSeed % 100) / 100; // 0-1 range
 
     // Try to call the FastAPI backend first
     let data;
@@ -58,7 +73,8 @@ export async function POST(request: NextRequest) {
             max: yearRange[1]
           },
           excludeMovies,
-          isFirstRecommendation
+          isFirstRecommendation,
+          sessionSeed: sessionSeed // Pass session seed to backend for consistent randomization
         })
       });
 
@@ -71,6 +87,7 @@ export async function POST(request: NextRequest) {
       console.log('Backend unavailable, using fallback data:', backendError);
       
       // Fallback data when backend is unavailable
+      // Use session seed to randomize fallback data
       const fallbackMovies = [
         {
           title: "The Grand Budapest Hotel",
@@ -101,7 +118,9 @@ export async function POST(request: NextRequest) {
         }
       ];
       
-      data = { movies: fallbackMovies };
+      // Shuffle fallback data based on session seed for variety
+      const shuffledFallback = [...fallbackMovies].sort(() => randomOffset - 0.5);
+      data = { movies: shuffledFallback };
     }
     
     // Transform the data and enrich with TMDB posters
@@ -124,7 +143,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       movies: transformedMovies,
-      mood: mood 
+      mood: mood,
+      sessionId: sessionId // Return session ID for frontend tracking
     });
 
   } catch (error) {

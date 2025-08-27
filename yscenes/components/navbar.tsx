@@ -66,7 +66,7 @@ export default function Navbar() {
           </div>
 
           {/* Authentication Buttons - Right side */}
-          <div className="absolute right-4 sm:right-6 lg:right-8">
+          <div className="absolute right-4 sm:right-6 lg:right-8 flex items-center">
             <SignedOut>
               <div className="flex items-center space-x-3">
                 {/* Sign Up Button */}
@@ -94,14 +94,18 @@ export default function Navbar() {
             </SignedOut>
             
             <SignedIn>
-              <UserButton 
-                appearance={{
-                  elements: {
-                    avatarBox: "w-10 h-10",
-                    userButtonPopoverCard: "bg-black/90 backdrop-blur-sm border border-white/30"
-                  }
-                }}
-              />
+              <div className="mt-4 relative">
+                {/* Glow effect behind avatar */}
+                <div className="absolute inset-0 w-12 h-12 bg-white/30 rounded-full blur-md scale-110"></div>
+                <UserButton 
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-12 h-12 !w-12 !h-12 relative z-10",
+                      userButtonPopoverCard: "bg-black/90 backdrop-blur-sm border border-white/30"
+                    }
+                  }}
+                />
+              </div>
             </SignedIn>
           </div>
 

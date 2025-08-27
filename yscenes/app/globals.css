@@ -226,3 +226,35 @@
     height: 40px;
   }
 }
+
+/* Clerk UserButton Avatar Size Override */
+.cl-userButtonAvatarBox {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+}
+
+.cl-userButtonAvatarImage {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3)) !important;
+}
+
+/* Force override any inline styles */
+.cl-userButtonAvatarBox[style] {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+}
+
+.cl-userButtonAvatarImage[style] {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3)) !important;
+}

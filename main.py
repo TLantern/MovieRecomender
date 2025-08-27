@@ -1,6 +1,7 @@
 import json
 from json import JSONDecodeError
 import os
+import random
 import requests
 from dotenv import load_dotenv
 
@@ -10,7 +11,11 @@ from pydantic import BaseModel
 from openai import ChatCompletion
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(verbose=True)
+
+# Debug: Print environment variables to see if they're loaded
+print(f"TMDB_API_KEY loaded: {'TMDB_API_KEY' in os.environ}")
+print(f"OPENAI_API_KEY loaded: {'OPENAI_API_KEY' in os.environ}")
 
 app = FastAPI()
 
@@ -47,6 +52,7 @@ class RecommendRequest(BaseModel):
     yearRange: YearRange
     excludeMovies: list = []  # List of movies to exclude
     isFirstRecommendation: bool = False  # Flag for fan favourites
+    sessionSeed: int = None  # Session seed for consistent randomization
 
 class EmailRequest(BaseModel):
     email: str    # basic validation by Pydantic; use constr/email if stricter
@@ -92,35 +98,44 @@ def enrich_with_tmdb(movie: dict) -> dict:
     return movie
 
 # Helper: fetch high-rated movies from TMDB based on mood
-def fetch_high_rated_movies(mood: str, year_range: dict, exclude_movies: list) -> dict:
+def fetch_high_rated_movies(mood: str, year_range: dict, exclude_movies: list, session_seed: int = None) -> dict:
     """Fetch movies with rating >9/10 from TMDB based on mood and year range."""
     try:
-        import random
-
-        # Search for movies with high ratings
-        resp = requests.get(
-            "https://api.themoviedb.org/3/discover/movie",
-            params={
-                "api_key": TMDB_API_KEY,
-                "vote_average.gte": 8.7,  # Only movies with rating >= 8.7
-                "vote_count.gte": 100,    # Minimum vote count for reliability
-                "primary_release_date.gte": f"{year_range['min']}-01-01",
-                "primary_release_date.lte": f"{year_range['max']}-12-31",
-                "sort_by": "vote_average.desc",  # Sort by highest rating first
-                "page": 1,
-                "language": "en-US"
-            },
-            timeout=10,
-        )
+        # Set random seed for consistent randomization within session
+        if session_seed:
+            random.seed(session_seed)
         
-        if resp.status_code != 200:
-            return None
+        # Add more randomization to the search
+        random_pages = random.sample(range(1, 6), 3)  # Randomly select 3 pages
+        all_results = []
+        
+        for page in random_pages:
+            resp = requests.get(
+                "https://api.themoviedb.org/3/discover/movie",
+                params={
+                    "api_key": TMDB_API_KEY,
+                    "vote_average.gte": 8.7,  # Only movies with rating >= 8.7
+                    "vote_count.gte": 100,    # Minimum vote count for reliability
+                    "primary_release_date.gte": f"{year_range['min']}-01-01",
+                    "primary_release_date.lte": f"{year_range['max']}-12-31",
+                    "sort_by": random.choice([
+                        "vote_average.desc", 
+                        "popularity.desc", 
+                        "release_date.desc"
+                    ]),
+                    "page": page,
+                    "language": "en-US"
+                },
+                timeout=10,
+            )
             
-        results = resp.json().get("results", [])
+            if resp.status_code == 200:
+                results = resp.json().get("results", [])
+                all_results.extend(results)
         
         # Filter out excluded movies
         filtered_results = []
-        for movie in results:
+        for movie in all_results:
             title = movie.get("title", "")
             year = movie.get("release_date", "")[:4] if movie.get("release_date") else ""
             
@@ -156,6 +171,10 @@ def fetch_high_rated_movies(mood: str, year_range: dict, exclude_movies: list) -
 # Endpoint: Recommend 3 movies based on mood
 @app.post("/recommend")
 async def recommend(req: RecommendRequest):
+    # Set random seed based on session for consistent randomization
+    if req.sessionSeed:
+        random.seed(req.sessionSeed)
+    
     # Build exclusion list for the prompt
     exclude_text = ""
     if req.excludeMovies:
@@ -163,15 +182,25 @@ async def recommend(req: RecommendRequest):
         for movie in req.excludeMovies:
             exclude_text += f"- {movie.get('title', 'Unknown')} ({movie.get('year', 'Unknown')})\n"
     
+    # Add session-specific randomization to the prompt
+    random_adjectives = [
+        "underrated", "overlooked", "cult classic", "indie gem", 
+        "foreign masterpiece", "arthouse", "experimental", "avant-garde",
+        "hidden treasure", "sleeper hit", "undiscovered gem", "cult favorite"
+    ]
+    
+    random_adjective = random.choice(random_adjectives)
+    
     if req.isFirstRecommendation:
-        # For first recommendation, we'll get 2 hidden gems from GPT and 1 masterpiece from TMDB
+        # For first recommendation, get 3 movies from GPT
         prompt = (
-            "You are a cinephile who ONLY returns valid JSON. "
-            "Recommend exactly 2 hidden-gem movies (no blockbusters, no classics). "
+            f"You are a cinephile who ONLY returns valid JSON. "
+            f"Recommend exactly 3 {random_adjective} movies (no blockbusters, no classics). "
             "CRITICAL: You must NOT recommend any movies from the exclusion list. "
-            "If you cannot find 2 unique movies, return fewer movies rather than duplicates. "
+            "If you cannot find 3 unique movies, return fewer movies rather than duplicates. "
             "Output exactly in THIS format and NOTHING else:\n"
             '{ "movies": [ '
+            '{ "title": "string", "year": number, "description": "string" }, '
             '{ "title": "string", "year": number, "description": "string" }, '
             '{ "title": "string", "year": number, "description": "string" } '
             '] }\n'
@@ -180,14 +209,14 @@ async def recommend(req: RecommendRequest):
     else:
         # Regular hidden-gem prompt for more recommendations
         prompt = (
-            "You are a cinephile who ONLY returns valid JSON. "
-            "Recommend exactly 3 hidden-gem movies (no blockbusters, no classics). "
+            f"You are a cinephile who ONLY returns valid JSON. "
+            f"Recommend exactly 3 {random_adjective} movies (no blockbusters, no classics). "
             "CRITICAL: You must NOT recommend any movies from the exclusion list. "
             "If you cannot find 3 unique movies, return fewer movies rather than duplicates. "
             "Output exactly in THIS format and NOTHING else:\n"
             '{ "movies": [ '
             '{ "title": "string", "year": number, "description": "string" }, '
-            '{ "title": "string", "description": "string" }, '
+            '{ "title": "string", "year": number, "description": "string" }, '
             '{ "title": "string", "year": number, "description": "string" } '
             '] }\n'
             f"User mood: \"{req.mood}\".{exclude_text}"
@@ -211,68 +240,37 @@ async def recommend(req: RecommendRequest):
         raise HTTPException(status_code=500, detail="`movies` is not a list")
 
     if req.isFirstRecommendation:
-        # For first recommendation: Get all 3 movies from GPT, then pick the best for masterpiece
-        gpt_movies = movies[:3]  # Get all 3 movies from GPT
+        # For first recommendation: Get 3 movies from GPT and enrich them
         enriched = []
-        
-        # Process all 3 movies from GPT first
-        for m in gpt_movies:
+        for m in movies[:3]:
             enriched.append(enrich_with_tmdb(m))
         
-        # Find the best movie from GPT results (rating 8.0+) for the masterpiece position
-        best_movie = None
-        best_rating = 0
+        # Ensure we have exactly 3 movies
+        while len(enriched) < 3:
+            # If we don't have enough movies, try to get more from TMDB
+            tmdb_backup = fetch_high_rated_movies(req.mood, req.yearRange.dict(), req.excludeMovies, req.sessionSeed)
+            if tmdb_backup and len(tmdb_backup) > 0:
+                enriched.extend(tmdb_backup[:3-len(enriched)])
+            else:
+                break
         
-        for movie in enriched:
-            rating = movie.get("rating_out_of_10", 0)
-            if rating and rating >= 8.0:
-                if rating > best_rating:
-                    best_rating = rating
-                    best_movie = movie
-        
-        # If no movie meets the 8.0 threshold, try TMDB
-        if not best_movie:
-            masterpiece = fetch_high_rated_movies(req.mood, req.yearRange.dict(), req.excludeMovies)
-            if masterpiece and len(masterpiece) > 0:
-                best_movie = masterpiece[0]
-        
-        # If still no masterpiece, use the highest rated GPT movie (even if < 8.0)
-        if not best_movie:
-            for movie in enriched:
-                rating = movie.get("rating_out_of_10", 0)
-                if rating and rating > best_rating:
-                    best_rating = rating
-                    best_movie = movie
-        
-        # Remove the best movie from the list and insert it in the middle
-        if best_movie in enriched:
-            enriched.remove(best_movie)
-        
-        # Insert masterpiece in the middle (index 1)
-        enriched.insert(1, best_movie)
-        
-        # Final guard: ensure middle card meets the threshold
-        try:
-            middle_rating = enriched[1].get("rating_out_of_10")
-            if middle_rating is None or float(middle_rating) < 8.7:
-                guard_pick = fetch_high_rated_movies(req.mood, req.yearRange.dict(), req.excludeMovies)
-                if guard_pick and len(guard_pick) > 0:
-                    enriched[1] = guard_pick[0]
-                else:
-                    # As last resort, set rating to threshold
-                    enriched[1]["rating_out_of_10"] = 9.0
-                    enriched[1]["stars"] = 4.5
-                    enriched[1]["source"] = "curated_guard"
-        except Exception as _:
-            pass
-        
-        return {"movies": enriched}
+        return {"movies": enriched[:3]}
     else:
         # Regular recommendations: enrich all 3 movies from GPT
         enriched = []
         for m in movies[:3]:
             enriched.append(enrich_with_tmdb(m))
-        return {"movies": enriched}
+        
+        # Ensure we have exactly 3 movies
+        while len(enriched) < 3:
+            # If we don't have enough movies, try to get more from TMDB
+            tmdb_backup = fetch_high_rated_movies(req.mood, req.yearRange.dict(), req.excludeMovies, req.sessionSeed)
+            if tmdb_backup and len(tmdb_backup) > 0:
+                enriched.extend(tmdb_backup[:3-len(enriched)])
+            else:
+                break
+        
+        return {"movies": enriched[:3]}
 
 # Endpoint: Collect and save user email to file
 @app.post("/subscribe")

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Navbar from '../components/navbar';
 import SearchBar from '../components/search-bar';
 import Bookmark from '../components/bookmark';
+import { useSessionMemory } from '../hooks/useSessionMemory';
 // import { useMovies } from '../hooks/useMovies';
 
 interface MovieResult {
@@ -19,6 +20,7 @@ interface MovieResult {
 
 export default function Home() {
   // const { movies, loading, error } = useMovies();
+  const { sessionId, addMovies, getExclusionList, clearMemory } = useSessionMemory();
   const [searchResults, setSearchResults] = useState<MovieResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -36,6 +38,9 @@ export default function Home() {
     setCurrentMood(mood);
     setCurrentYearRange(yearRange);
 
+    // Clear session memory for new search to start fresh
+    clearMemory();
+
     try {
       const res = await fetch('/api/recommend', {
         method: "POST",
@@ -43,7 +48,9 @@ export default function Home() {
         body: JSON.stringify({ 
           mood, 
           yearRange,
-          isFirstRecommendation: true  // Flag for fan favourites
+          isFirstRecommendation: true,  // Flag for fan favourites
+          sessionId: sessionId, // Pass session ID for consistent randomization
+          excludeMovies: [] // Start with empty exclusion list for new search
         })
       });
       
@@ -51,6 +58,14 @@ export default function Home() {
       
       const { movies: results } = await res.json();
       setSearchResults(results);
+      
+      // Add new movies to session memory
+      addMovies(results.map((movie: MovieResult) => ({ title: movie.title, year: movie.year })));
+      
+      // Scroll to end of page after results are loaded
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 100);
     } catch (err) {
       console.error('Search error:', err);
       setSearchResults([]);
@@ -65,8 +80,8 @@ export default function Home() {
     setMoreLoading(true);
     
     try {
-      // Get current movies to exclude (capture current state)
-      const currentMovies = searchResults.map(movie => ({ title: movie.title, year: movie.year }));
+      // Get all previously recommended movies from session memory
+      const excludeMovies = getExclusionList();
       
       const res = await fetch('/api/recommend', {
         method: "POST",
@@ -74,8 +89,9 @@ export default function Home() {
         body: JSON.stringify({ 
           mood: currentMood, 
           yearRange: currentYearRange,
-          excludeMovies: currentMovies,
-          isFirstRecommendation: false  // Use current model for more recommendations
+          excludeMovies: excludeMovies, // Use session memory instead of just current results
+          isFirstRecommendation: false,  // Use current model for more recommendations
+          sessionId: sessionId // Pass session ID for consistent randomization
         })
       });
       
@@ -84,8 +100,8 @@ export default function Home() {
       const { movies: newResults } = await res.json();
       
       // Filter out any duplicates that might have slipped through
-      const filteredNewResults = newResults.filter((newMovie: any) => 
-        !currentMovies.some(existing => 
+      const filteredNewResults = newResults.filter((newMovie: MovieResult) => 
+        !excludeMovies.some(existing => 
           existing.title.toLowerCase() === newMovie.title.toLowerCase() && 
           existing.year === newMovie.year
         )
@@ -93,6 +109,14 @@ export default function Home() {
       
       // Add filtered results to existing ones
       setSearchResults(prev => [...prev, ...filteredNewResults]);
+      
+      // Add new movies to session memory
+      addMovies(filteredNewResults.map((movie: MovieResult) => ({ title: movie.title, year: movie.year })));
+      
+      // Scroll to end of page after new results are loaded
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 100);
     } catch (err) {
       console.error('More recommendations error:', err);
     } finally {

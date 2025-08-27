@@ -72,7 +72,7 @@ const Bookmark: React.FC<BookmarkProps> = ({
         onChange={handleToggle}
         className="hidden"
       />
-      <div className={`bookmark transition-all duration-300 ${
+      <div className={`bookmark transition-all duration-600 ${
         isChecked ? 'fill-yellow-400' : 'fill-gray-400 hover:fill-gray-300'
       }`}>
         <svg viewBox="0 0 32 32" className="w-6 h-6">

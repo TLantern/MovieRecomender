@@ -33,7 +33,7 @@ export default function BookmarksPage() {
         const data = await response.json();
         // Transform API data to match our interface
         const transformedBookmarks: BookmarkedMovie[] = data.bookmarks.map((bookmark: any) => ({
-          id: bookmark.movieId,
+          id: bookmark.id || `${bookmark.movieId}-${bookmark.title}-${bookmark.year}`,
           title: bookmark.title,
           year: bookmark.year,
           poster_url: bookmark.poster_url,
