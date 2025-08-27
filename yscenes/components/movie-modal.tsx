@@ -42,15 +42,27 @@ export default function MovieModal({ movie, isOpen, onClose }: MovieModalProps) 
     }
   }, [isOpen, movie]);
 
-  // Capture wheel events to scroll description instead of page
+  // Capture wheel events to scroll modal content instead of page
   useEffect(() => {
     if (isOpen) {
       const handleWheel = (e: WheelEvent) => {
-        const descriptionElement = document.querySelector('.movie-description') as HTMLElement;
+        // Find the element under the mouse cursor
+        const target = e.target as HTMLElement;
+        
+        // Check if we're hovering over scrollable content
+        const descriptionElement = target.closest('.movie-description') as HTMLElement;
+        const watchProvidersElement = target.closest('.watch-providers') as HTMLElement;
+        
         if (descriptionElement && descriptionElement.scrollHeight > descriptionElement.clientHeight) {
+          // Allow description to scroll
           e.preventDefault();
           descriptionElement.scrollTop += e.deltaY;
+        } else if (watchProvidersElement && watchProvidersElement.scrollHeight > watchProvidersElement.clientHeight) {
+          // Allow watch providers to scroll
+          e.preventDefault();
+          watchProvidersElement.scrollTop += e.deltaY;
         }
+        // If neither, let the page scroll normally
       };
 
       document.addEventListener('wheel', handleWheel, { passive: false });
@@ -133,7 +145,7 @@ export default function MovieModal({ movie, isOpen, onClose }: MovieModalProps) 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div 
           className="bg-black/90 backdrop-blur-md rounded-xl border border-white/30 shadow-2xl overflow-hidden"
-          style={{ width: 'min(95vw, calc(90vh * 12 / 16))', height: 'min(90vh, calc(95vw * 16 / 9))' }}
+          style={{ width: 'min(95vw, calc(90vh * 12 / 16))', height: 'min(90vh, calc(95vw * 16 / 12))' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close button */}
@@ -220,14 +232,14 @@ export default function MovieModal({ movie, isOpen, onClose }: MovieModalProps) 
                   </p>
                   {/* Scroll indicator */}
                   <div className="text-center text-gray-500 text-xs mt-2 opacity-60">
-                    💫 Scroll to read more
+
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Right Side - Where to Watch */}
-            <div className="w-96 p-6 md:p-7 border-l border-white/20">
+            <div className="w-56 p-6 md:p-7 border-l border-white/20 overflow-y-auto watch-providers">
               <h3 className="text-2xl font-bold text-white mb-6 font-heading">
                 Where to Watch
               </h3>
