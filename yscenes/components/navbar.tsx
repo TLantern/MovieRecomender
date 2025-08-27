@@ -58,7 +58,7 @@ export default function Navbar() {
               </Link>
               <Link 
                 href="/pricing" 
-                className="text-white font-semibold px-3 py-2 rounded-md text-sm relative after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+                className="text-white font-semibold px-3 py-2 rounded-md text-sm relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
               >
                 Pricing
               </Link>

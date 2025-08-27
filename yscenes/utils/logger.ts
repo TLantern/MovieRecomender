@@ -24,6 +24,7 @@ interface RecommendationLog {
 export class RecommendationLogger {
   private resultsDir: string;
   private isServerless: boolean;
+  private currentLogFile: string;
 
   constructor() {
     // Check if we're in a serverless environment
@@ -32,11 +33,15 @@ export class RecommendationLogger {
     if (this.isServerless) {
       // In serverless, disable file logging completely
       this.resultsDir = '';
+      this.currentLogFile = '';
       console.log('Logger: Serverless environment detected, file logging disabled');
     } else {
       // Use process.cwd() but ensure we're in the right directory
       this.resultsDir = path.join(process.cwd(), 'results');
       this.ensureResultsDir();
+      // Generate a new log file name for this instance
+      this.currentLogFile = this.generateNewLogFile();
+      console.log(`Logger: New log file created: ${this.currentLogFile}`);
     }
   }
 
@@ -60,10 +65,10 @@ export class RecommendationLogger {
     }
   }
 
-  private generateFilename(): string {
+  private generateNewLogFile(): string {
     const now = new Date();
     const timestamp = now.toISOString().replace(/[:.]/g, '-');
-    return `recommendation-${timestamp}.json`;
+    return `recommendation-session-${timestamp}.json`;
   }
 
   async logRecommendation(
@@ -91,13 +96,18 @@ export class RecommendationLogger {
         return;
       }
 
-      const filename = this.generateFilename();
-      const filepath = path.join(this.resultsDir, filename);
+      // Create a new log file for this session if it doesn't exist
+      if (!this.currentLogFile) {
+        this.currentLogFile = this.generateNewLogFile();
+        console.log(`Logger: Created new log file: ${this.currentLogFile}`);
+      }
 
-      // Write the log entry to a JSON file using synchronous operation for better compatibility
+      const filepath = path.join(this.resultsDir, this.currentLogFile);
+      
+      // Write the log entry to the current session file
       fs.writeFileSync(
         filepath,
-        JSON.stringify(logEntry, null, 2),
+        JSON.stringify([logEntry], null, 2), // Start fresh with just this entry
         'utf8'
       );
 
@@ -108,6 +118,89 @@ export class RecommendationLogger {
     }
   }
 
+  // Get all previously recommended movie titles from ALL log files to prevent duplicates
+  async getAllPreviouslyRecommendedTitles(): Promise<string[]> {
+    try {
+      // If no results directory (serverless), return empty array
+      if (!this.resultsDir) {
+        return [];
+      }
+
+      const files = fs.readdirSync(this.resultsDir);
+      const jsonFiles = files.filter(file => file.endsWith('.json'));
+      
+      const allTitles: string[] = [];
+
+      for (const file of jsonFiles) {
+        const filepath = path.join(this.resultsDir, file);
+        try {
+          const content = fs.readFileSync(filepath, 'utf8');
+          const logEntries: RecommendationLog[] = JSON.parse(content);
+          
+          logEntries.forEach(logEntry => {
+            logEntry.movies.forEach(movie => {
+              const titleKey = `${movie.title} (${movie.year})`;
+              if (!allTitles.includes(titleKey)) {
+                allTitles.push(titleKey);
+              }
+            });
+          });
+        } catch (error) {
+          console.warn(`Could not parse log file ${file}:`, error);
+        }
+      }
+
+      return allTitles.sort();
+    } catch (error) {
+      console.error('Error getting previously recommended titles:', error);
+      return [];
+    }
+  }
+
+  // Get all previously recommended movies with full details from ALL log files
+  async getAllPreviouslyRecommendedMovies(): Promise<MovieRecommendation[]> {
+    try {
+      // If no results directory (serverless), return empty array
+      if (!this.resultsDir) {
+        return [];
+      }
+
+      const files = fs.readdirSync(this.resultsDir);
+      const jsonFiles = files.filter(file => file.endsWith('.json'));
+      
+      const allMovies: MovieRecommendation[] = [];
+
+      for (const file of jsonFiles) {
+        const filepath = path.join(this.resultsDir, file);
+        try {
+          const content = fs.readFileSync(filepath, 'utf8');
+          const logEntries: RecommendationLog[] = JSON.parse(content);
+          
+          logEntries.forEach(logEntry => {
+            logEntry.movies.forEach(movie => {
+              // Check if we already have this movie (title + year combination)
+              const existingIndex = allMovies.findIndex(
+                existing => existing.title === movie.title && existing.year === movie.year
+              );
+              
+              if (existingIndex === -1) {
+                allMovies.push(movie);
+              }
+            });
+          });
+        } catch (error) {
+          console.warn(`Could not parse log file ${file}:`, error);
+        }
+      }
+
+      return allMovies;
+    } catch (error) {
+      console.error('Error getting previously recommended movies:', error);
+      return [];
+    }
+  }
+
+  // Get recent logs from ALL log files
   async getRecentLogs(limit: number = 10): Promise<RecommendationLog[]> {
     try {
       // If no results directory (serverless), return empty array
@@ -118,23 +211,22 @@ export class RecommendationLogger {
       const files = fs.readdirSync(this.resultsDir);
       const jsonFiles = files.filter(file => file.endsWith('.json'));
       
-      // Sort files by creation time (newest first)
-      const sortedFiles = jsonFiles.sort((a, b) => {
-        const statA = fs.statSync(path.join(this.resultsDir, a));
-        const statB = fs.statSync(path.join(this.resultsDir, b));
-        return statB.birthtime.getTime() - statA.birthtime.getTime();
-      });
+      const allLogs: RecommendationLog[] = [];
 
-      const recentLogs: RecommendationLog[] = [];
-      
-      for (let i = 0; i < Math.min(limit, sortedFiles.length); i++) {
-        const filepath = path.join(this.resultsDir, sortedFiles[i]);
-        const content = fs.readFileSync(filepath, 'utf8');
-        const logEntry = JSON.parse(content) as RecommendationLog;
-        recentLogs.push(logEntry);
+      for (const file of jsonFiles) {
+        const filepath = path.join(this.resultsDir, file);
+        try {
+          const content = fs.readFileSync(filepath, 'utf8');
+          const logEntries: RecommendationLog[] = JSON.parse(content);
+          allLogs.push(...logEntries);
+        } catch (error) {
+          console.warn(`Could not parse log file ${file}:`, error);
+        }
       }
 
-      return recentLogs;
+      // Sort by timestamp and return the most recent
+      allLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return allLogs.slice(0, limit);
     } catch (error) {
       console.error('Error reading recent logs:', error);
       return [];
@@ -146,6 +238,12 @@ export class RecommendationLogger {
     totalMovies: number;
     moods: Record<string, number>;
     backendUsage: { backend: number; fallback: number };
+    duplicateDetection: {
+      totalUniqueTitles: number;
+      totalDuplicateTitles: number;
+      duplicateTitles: string[];
+    };
+    sessionFiles: number;
   }> {
     try {
       // If no results directory (serverless), return empty stats
@@ -154,7 +252,13 @@ export class RecommendationLogger {
           totalRecommendations: 0,
           totalMovies: 0,
           moods: {},
-          backendUsage: { backend: 0, fallback: 0 }
+          backendUsage: { backend: 0, fallback: 0 },
+          duplicateDetection: {
+            totalUniqueTitles: 0,
+            totalDuplicateTitles: 0,
+            duplicateTitles: []
+          },
+          sessionFiles: 0
         };
       }
 
@@ -165,24 +269,50 @@ export class RecommendationLogger {
       let totalMovies = 0;
       const moods: Record<string, number> = {};
       const backendUsage = { backend: 0, fallback: 0 };
+      const allTitles: string[] = [];
+      const titleCounts: Record<string, number> = {};
 
       for (const file of jsonFiles) {
         const filepath = path.join(this.resultsDir, file);
-        const content = fs.readFileSync(filepath, 'utf8');
-        const logEntry = JSON.parse(content) as RecommendationLog;
-        
-        totalRecommendations++;
-        totalMovies += logEntry.movies.length;
-        
-        moods[logEntry.mood] = (moods[logEntry.mood] || 0) + 1;
-        backendUsage[logEntry.source]++;
+        try {
+          const content = fs.readFileSync(filepath, 'utf8');
+          const logEntries: RecommendationLog[] = JSON.parse(content);
+          
+          logEntries.forEach(logEntry => {
+            totalRecommendations++;
+            totalMovies += logEntry.movies.length;
+            
+            moods[logEntry.mood] = (moods[logEntry.mood] || 0) + 1;
+            backendUsage[logEntry.source]++;
+            
+            // Collect all titles for duplicate detection
+            logEntry.movies.forEach(movie => {
+              const titleKey = `${movie.title} (${movie.year})`;
+              allTitles.push(titleKey);
+              titleCounts[titleKey] = (titleCounts[titleKey] || 0) + 1;
+            });
+          });
+        } catch (error) {
+          console.warn(`Could not parse log file ${file}:`, error);
+        }
       }
+
+      // Calculate duplicate detection stats
+      const uniqueTitles = Object.keys(titleCounts);
+      const duplicateTitles = uniqueTitles.filter(title => titleCounts[title] > 1);
+      const totalDuplicateTitles = duplicateTitles.reduce((sum, title) => sum + titleCounts[title] - 1, 0);
 
       return {
         totalRecommendations,
         totalMovies,
         moods,
-        backendUsage
+        backendUsage,
+        duplicateDetection: {
+          totalUniqueTitles: uniqueTitles.length,
+          totalDuplicateTitles,
+          duplicateTitles
+        },
+        sessionFiles: jsonFiles.length
       };
     } catch (error) {
       console.error('Error getting stats:', error);
@@ -190,8 +320,148 @@ export class RecommendationLogger {
         totalRecommendations: 0,
         totalMovies: 0,
         moods: {},
-        backendUsage: { backend: 0, fallback: 0 }
+        backendUsage: { backend: 0, fallback: 0 },
+        duplicateDetection: {
+          totalUniqueTitles: 0,
+          totalDuplicateTitles: 0,
+          duplicateTitles: []
+        },
+        sessionFiles: 0
       }
+    }
+  }
+
+  async getDuplicateTitles(): Promise<{
+    duplicateTitles: string[];
+    titleCounts: Record<string, number>;
+    recommendationsWithDuplicates: Array<{
+      timestamp: string;
+      sessionId?: string;
+      mood: string;
+      duplicateTitles: string[];
+    }>;
+  }> {
+    try {
+      // If no results directory (serverless), return empty result
+      if (!this.resultsDir) {
+        return {
+          duplicateTitles: [],
+          titleCounts: {},
+          recommendationsWithDuplicates: []
+        };
+      }
+      const files = fs.readdirSync(this.resultsDir);
+      const jsonFiles = files.filter(file => file.endsWith('.json'));
+      
+      const titleCounts: Record<string, number> = {};
+      const recommendationsWithDuplicates: Array<{
+        timestamp: string;
+        sessionId?: string;
+        mood: string;
+        duplicateTitles: string[];
+      }> = [];
+
+      // First pass: count all titles from all files
+      for (const file of jsonFiles) {
+        const filepath = path.join(this.resultsDir, file);
+        try {
+          const content = fs.readFileSync(filepath, 'utf8');
+          const logEntries: RecommendationLog[] = JSON.parse(content);
+          
+          logEntries.forEach(logEntry => {
+            logEntry.movies.forEach(movie => {
+              const titleKey = `${movie.title} (${movie.year})`;
+              titleCounts[titleKey] = (titleCounts[titleKey] || 0) + 1;
+            });
+          });
+        } catch (error) {
+          console.warn(`Could not parse log file ${file}:`, error);
+        }
+      }
+
+      // Second pass: find recommendations with duplicates
+      for (const file of jsonFiles) {
+        const filepath = path.join(this.resultsDir, file);
+        try {
+          const content = fs.readFileSync(filepath, 'utf8');
+          const logEntries: RecommendationLog[] = JSON.parse(content);
+          
+          logEntries.forEach(logEntry => {
+            const duplicateTitlesInRecommendation = logEntry.movies
+              .map(movie => `${movie.title} (${movie.year})`)
+              .filter(titleKey => titleCounts[titleKey] > 1);
+
+            if (duplicateTitlesInRecommendation.length > 0) {
+              recommendationsWithDuplicates.push({
+                timestamp: logEntry.timestamp,
+                sessionId: logEntry.sessionId,
+                mood: logEntry.mood,
+                duplicateTitles: duplicateTitlesInRecommendation
+              });
+            }
+          });
+        } catch (error) {
+          console.warn(`Could not parse log file ${file}:`, error);
+        }
+      }
+
+      const duplicateTitles = Object.keys(titleCounts).filter(title => titleCounts[title] > 1);
+
+      return {
+        duplicateTitles,
+        titleCounts,
+        recommendationsWithDuplicates
+      };
+    } catch (error) {
+      console.error('Error getting duplicate titles:', error);
+      return {
+        duplicateTitles: [],
+        titleCounts: {},
+        recommendationsWithDuplicates: []
+      };
+    }
+  }
+
+  // Get list of all session files
+  async getSessionFiles(): Promise<Array<{
+    filename: string;
+    timestamp: string;
+    recommendationCount: number;
+    movieCount: number;
+  }>> {
+    try {
+      if (!this.resultsDir) {
+        return [];
+      }
+
+      const files = fs.readdirSync(this.resultsDir);
+      const jsonFiles = files.filter(file => file.endsWith('.json'));
+      
+      const sessionInfo = [];
+
+      for (const file of jsonFiles) {
+        const filepath = path.join(this.resultsDir, file);
+        try {
+          const content = fs.readFileSync(filepath, 'utf8');
+          const logEntries: RecommendationLog[] = JSON.parse(content);
+          
+          sessionInfo.push({
+            filename: file,
+            timestamp: logEntries[0]?.timestamp || 'Unknown',
+            recommendationCount: logEntries.length,
+            movieCount: logEntries.reduce((sum, entry) => sum + entry.movies.length, 0)
+          });
+        } catch (error) {
+          console.warn(`Could not parse log file ${file}:`, error);
+        }
+      }
+
+      // Sort by timestamp (newest first)
+      sessionInfo.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return sessionInfo;
+    } catch (error) {
+      console.error('Error getting session files:', error);
+      return [];
     }
   }
 }

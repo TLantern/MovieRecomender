@@ -47,7 +47,7 @@ async function getTMDBPoster(title: string, year: number): Promise<string | null
 
 export async function POST(request: NextRequest) {
   try {
-    const { mood, yearRange, excludeMovies = [], isFirstRecommendation = false, sessionId } = await request.json();
+    const { mood, yearRange, actor, excludeMovies = [], isFirstRecommendation = false, sessionId } = await request.json();
 
     if (!mood) {
       return NextResponse.json({ error: 'Mood is required' }, { status: 400 });
@@ -60,6 +60,35 @@ export async function POST(request: NextRequest) {
     // Generate session-specific randomization seed
     const sessionSeed = sessionId ? hashString(sessionId) : Date.now();
     const randomOffset = (sessionSeed % 100) / 100; // 0-1 range
+
+    // Get previously recommended titles to exclude them and prevent duplicates
+    let previouslyRecommendedTitles: string[] = [];
+    try {
+      const excludeResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/logs?action=exclude-titles`);
+      if (excludeResponse.ok) {
+        const excludeData = await excludeResponse.json();
+        previouslyRecommendedTitles = excludeData.excludeTitles || [];
+        console.log(`Excluding ${previouslyRecommendedTitles.length} previously recommended titles to prevent duplicates`);
+      }
+    } catch (error) {
+      console.warn('Could not fetch previously recommended titles for exclusion:', error);
+    }
+
+    // Combine user-provided exclusions with previously recommended titles
+    const allExcludeMovies = [...excludeMovies];
+    
+    // Add previously recommended titles to exclusion list
+    previouslyRecommendedTitles.forEach(titleWithYear => {
+      // Extract title and year from "Title (Year)" format
+      const match = titleWithYear.match(/^(.+?)\s*\((\d{4})\)$/);
+      if (match) {
+        const [, title, year] = match;
+        allExcludeMovies.push({
+          title: title.trim(),
+          year: parseInt(year)
+        });
+      }
+    });
 
     // Try to call the FastAPI backend first
     let data;
@@ -76,7 +105,8 @@ export async function POST(request: NextRequest) {
             min: yearRange[0],
             max: yearRange[1]
           },
-          excludeMovies,
+          actor,
+          excludeMovies: allExcludeMovies, // Use the enhanced exclusion list
           isFirstRecommendation,
           sessionSeed: sessionSeed // Pass session seed to backend for consistent randomization
         })
@@ -124,8 +154,27 @@ export async function POST(request: NextRequest) {
         }
       ];
       
+      // Filter out previously recommended movies from fallback data
+      const filteredFallbackMovies = fallbackMovies.filter(movie => {
+        const titleKey = `${movie.title} (${movie.year})`;
+        return !previouslyRecommendedTitles.includes(titleKey);
+      });
+      
+      // If all fallback movies were filtered out, add some generic ones
+      if (filteredFallbackMovies.length === 0) {
+        filteredFallbackMovies.push({
+          title: "Paddington",
+          year: 2014,
+          description: "A charming family film about a polite bear who finds himself in London, perfect for uplifting entertainment.",
+          rating_out_of_10: 7.8,
+          stars: "★★★★☆",
+          stream_link: "https://www.netflix.com",
+          poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+        });
+      }
+      
       // Shuffle fallback data based on session seed for variety
-      const shuffledFallback = [...fallbackMovies].sort(() => randomOffset - 0.5);
+      const shuffledFallback = [...filteredFallbackMovies].sort(() => randomOffset - 0.5);
       data = { movies: shuffledFallback };
     }
     
@@ -160,7 +209,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       movies: transformedMovies,
       mood: mood,
-      sessionId: sessionId // Return session ID for frontend tracking
+      sessionId: sessionId, // Return session ID for frontend tracking
+      excludedCount: previouslyRecommendedTitles.length, // Return count of excluded titles
+      message: `Excluded ${previouslyRecommendedTitles.length} previously recommended titles to prevent duplicates`
     });
 
   } catch (error) {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 // import Carousel from '../components/carousel';
 import Navbar from '../components/navbar';
 import SearchBar from '../components/search-bar';
+import ActorCarousel from '../components/actor-carousel';
 import Bookmark from '../components/bookmark';
 import { useSessionMemory } from '../hooks/useSessionMemory';
 // import { useMovies } from '../hooks/useMovies';
@@ -20,7 +21,15 @@ interface MovieResult {
 
 export default function Home() {
   // const { movies, loading, error } = useMovies();
-  const { sessionId, addMovies, getExclusionList, clearMemory } = useSessionMemory();
+  const { 
+    sessionId, 
+    addMovies, 
+    getExclusionList, 
+    clearMemory, 
+    isExpired,
+    startFreshSession,
+    getSessionStats 
+  } = useSessionMemory();
   const [searchResults, setSearchResults] = useState<MovieResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -29,17 +38,27 @@ export default function Home() {
   const [moreLoading, setMoreLoading] = useState(false);
   const [currentMood, setCurrentMood] = useState('');
   const [currentYearRange, setCurrentYearRange] = useState<[number, number]>([1970, 2025]);
+  const [selectedActor, setSelectedActor] = useState<string>('');
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
 
-  const handleSearch = async (mood: string, yearRange: [number, number]) => {
+  // Auto-start fresh session if current one is expired
+  useEffect(() => {
+    if (isExpired) {
+      console.log('Session expired, starting fresh session');
+      startFreshSession();
+    }
+  }, [isExpired, startFreshSession]);
+
+  const handleSearch = async (mood: string, yearRange: [number, number], actor?: string) => {
     setSearchLoading(true);
     setShowResults(true);
     setSearchResults([]);
     setCurrentMood(mood);
     setCurrentYearRange(yearRange);
 
-    // Clear session memory for new search to start fresh
-    clearMemory();
+    // Start fresh session for new search to prevent duplicates
+    const newSessionId = startFreshSession();
+    console.log('Started new search session:', newSessionId);
 
     try {
       const res = await fetch('/api/recommend', {
@@ -48,19 +67,27 @@ export default function Home() {
         body: JSON.stringify({ 
           mood, 
           yearRange,
+          actor,
           isFirstRecommendation: true,  // Flag for fan favourites
-          sessionId: sessionId, // Pass session ID for consistent randomization
+          sessionId: newSessionId, // Use new session ID
           excludeMovies: [] // Start with empty exclusion list for new search
         })
       });
       
       if (!res.ok) throw await res.text();
       
-      const { movies: results } = await res.json();
+      const { movies: results, excludedCount, message } = await res.json();
       setSearchResults(results);
       
       // Add new movies to session memory
       addMovies(results.map((movie: MovieResult) => ({ title: movie.title, year: movie.year })));
+      
+      // Log session info
+      const sessionStats = getSessionStats();
+      console.log('Search completed with session stats:', sessionStats);
+      if (excludedCount > 0) {
+        console.log(`Excluded ${excludedCount} previously recommended titles:`, message);
+      }
       
       // Scroll to end of page after results are loaded
       setTimeout(() => {
@@ -74,46 +101,47 @@ export default function Home() {
     }
   };
 
+  const handleActorClick = (actorName: string) => {
+    setSelectedActor(actorName);
+  };
+
   const handleMoreRecommendations = async () => {
-    if (!currentMood || moreLoading) return;
+    if (searchLoading || moreLoading) return;
     
     setMoreLoading(true);
     
     try {
-      // Get all previously recommended movies from session memory
-      const excludeMovies = getExclusionList();
-      
       const res = await fetch('/api/recommend', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           mood: currentMood, 
           yearRange: currentYearRange,
-          excludeMovies: excludeMovies, // Use session memory instead of just current results
-          isFirstRecommendation: false,  // Use current model for more recommendations
-          sessionId: sessionId // Pass session ID for consistent randomization
+          actor: selectedActor,
+          isFirstRecommendation: false,
+          sessionId: sessionId,
+          excludeMovies: getExclusionList() // Exclude movies from current session
         })
       });
       
       if (!res.ok) throw await res.text();
       
-      const { movies: newResults } = await res.json();
+      const { movies: results, excludedCount, message } = await res.json();
       
-      // Filter out any duplicates that might have slipped through
-      const filteredNewResults = newResults.filter((newMovie: MovieResult) => 
-        !excludeMovies.some(existing => 
-          existing.title.toLowerCase() === newMovie.title.toLowerCase() && 
-          existing.year === newMovie.year
-        )
-      );
-      
-      // Add filtered results to existing ones
-      setSearchResults(prev => [...prev, ...filteredNewResults]);
+      // Add new movies to existing results
+      setSearchResults(prev => [...prev, ...results]);
       
       // Add new movies to session memory
-      addMovies(filteredNewResults.map((movie: MovieResult) => ({ title: movie.title, year: movie.year })));
+      addMovies(results.map((movie: MovieResult) => ({ title: movie.title, year: movie.year })));
       
-      // Scroll to end of page after new results are loaded
+      // Log session info
+      const sessionStats = getSessionStats();
+      console.log('More recommendations added with session stats:', sessionStats);
+      if (excludedCount > 0) {
+        console.log(`Excluded ${excludedCount} previously recommended titles:`, message);
+      }
+      
+      // Scroll to show new results
       setTimeout(() => {
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       }, 100);
@@ -169,7 +197,7 @@ export default function Home() {
               <h1 className="text-4xl font-bold text-center text-white mb-8 pt-8 drop-shadow-[0_0_20px_rgba(200,4,24,0.3)] font-heading" style={{animation: 'fadeInOut 3s ease-in-out infinite'}}>
               What's <span className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 bg-clip-text text-transparent animate-pulse" style={{animationDuration: '3s'}}>the Mood</span> for <span className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 bg-clip-text text-transparent animate-pulse" style={{animationDuration: '3s'}}>Tonight</span>?
             </h1>
-                <SearchBar onSearch={handleSearch} loading={searchLoading} />
+                <SearchBar onSearch={handleSearch} loading={searchLoading} selectedActor={selectedActor} />
               </div>
             </div>
 
@@ -245,6 +273,13 @@ export default function Home() {
               </div>
             </div> */}
           </div>
+          
+          {/* Actor Carousel */}
+          {!showResults && (
+            <div className="mt-8">
+              <ActorCarousel onActorClick={handleActorClick} />
+            </div>
+          )}
           
           {/* Top Email Form - positioned below main card when no results are displayed */}
           {!showResults && (

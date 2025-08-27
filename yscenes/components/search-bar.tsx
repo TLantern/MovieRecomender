@@ -5,11 +5,12 @@ import { Slider } from './ui/slider';
 import Image from 'next/image';
 
 interface SearchBarProps {
-  onSearch: (mood: string, yearRange: [number, number]) => void;
+  onSearch: (mood: string, yearRange: [number, number], selectedActor?: string) => void;
   loading?: boolean;
+  selectedActor?: string;
 }
 
-export default function SearchBar({ onSearch, loading = false }: SearchBarProps) {
+export default function SearchBar({ onSearch, loading = false, selectedActor }: SearchBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [mood, setMood] = useState('');
   const [yearRange, setYearRange] = useState<[number, number]>([1970, 2025]);
@@ -111,7 +112,7 @@ export default function SearchBar({ onSearch, loading = false }: SearchBarProps)
       alert("Tell us your mood first!");
       return;
     }
-    onSearch(mood.trim(), yearRange);
+    onSearch(mood.trim(), yearRange, selectedActor);
   };
 
   const handleBottomEmailSubmit = async () => {
@@ -168,6 +169,14 @@ export default function SearchBar({ onSearch, loading = false }: SearchBarProps)
       {/* Mood Input */}
       <div className="flex justify-center mb-4">
         <div className="relative">
+          {/* Selected Actor Tag */}
+          {selectedActor && (
+            <div className="absolute -top-8 left-0 right-0 flex justify-center z-20">
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+                🎬 {selectedActor}
+              </div>
+            </div>
+          )}
           <textarea
             ref={textareaRef}
             value={mood}
