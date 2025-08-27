@@ -25,6 +25,7 @@ export class RecommendationLogger {
   private resultsDir: string;
   private isServerless: boolean;
   private currentLogFile: string;
+  private currentSessionId: string;
 
   constructor() {
     // Check if we're in a serverless environment
@@ -34,14 +35,16 @@ export class RecommendationLogger {
       // In serverless, disable file logging completely
       this.resultsDir = '';
       this.currentLogFile = '';
+      this.currentSessionId = '';
       console.log('Logger: Serverless environment detected, file logging disabled');
     } else {
       // Use process.cwd() but ensure we're in the right directory
       this.resultsDir = path.join(process.cwd(), 'results');
       this.ensureResultsDir();
-      // Generate a new log file name for this instance
-      this.currentLogFile = this.generateNewLogFile();
-      console.log(`Logger: New log file created: ${this.currentLogFile}`);
+      // Don't create a log file immediately - wait for first recommendation
+      this.currentLogFile = '';
+      this.currentSessionId = '';
+      console.log(`Logger: Initialized, will create log file on first recommendation`);
     }
   }
 
@@ -96,22 +99,40 @@ export class RecommendationLogger {
         return;
       }
 
-      // Create a new log file for this session if it doesn't exist
-      if (!this.currentLogFile) {
+      // Check if we need a new log file (new session or no current file)
+      if (!this.currentLogFile || (sessionId && sessionId !== this.currentSessionId)) {
         this.currentLogFile = this.generateNewLogFile();
-        console.log(`Logger: Created new log file: ${this.currentLogFile}`);
+        this.currentSessionId = sessionId || '';
+        console.log(`Logger: Created new log file for session ${sessionId}: ${this.currentLogFile}`);
       }
 
       const filepath = path.join(this.resultsDir, this.currentLogFile);
       
-      // Write the log entry to the current session file
+      let existingEntries: RecommendationLog[] = [];
+      
+      // Read existing entries if file exists
+      if (fs.existsSync(filepath)) {
+        try {
+          const existingContent = fs.readFileSync(filepath, 'utf8');
+          existingEntries = JSON.parse(existingContent);
+          console.log(`Logger: Found ${existingEntries.length} existing entries in session file`);
+        } catch (parseError) {
+          console.warn('Logger: Could not parse existing file, starting fresh:', parseError);
+          existingEntries = [];
+        }
+      }
+      
+      // Append new entry to existing entries
+      existingEntries.push(logEntry);
+      
+      // Write all entries back to file
       fs.writeFileSync(
         filepath,
-        JSON.stringify([logEntry], null, 2), // Start fresh with just this entry
+        JSON.stringify(existingEntries, null, 2),
         'utf8'
       );
 
-      console.log(`Recommendation logged to: ${filepath}`);
+      console.log(`Recommendation logged to: ${filepath} (${existingEntries.length} total entries)`);
     } catch (error) {
       console.error('Error logging recommendation:', error);
       // Don't throw - logging should not break the main functionality

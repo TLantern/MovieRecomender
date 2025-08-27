@@ -90,49 +90,25 @@ export function useSession() {
   }, []);
 
   useEffect(() => {
-    // Load existing session or create new one
-    let currentSessionInfo: SessionInfo;
-    const stored = sessionStorage.getItem('movieRecommenderSession');
+    // Always create a completely new session on page load/refresh
+    // This ensures session isolation as per the original design
+    const now = Date.now();
+    const currentSessionInfo: SessionInfo = {
+      sessionId: `session_${now}_${Math.random().toString(36).substr(2, 9)}`,
+      startTime: now,
+      lastActivity: now,
+      isExpired: false,
+      timeRemaining: SESSION_TIMEOUT
+    };
     
-    if (stored) {
-      try {
-        currentSessionInfo = JSON.parse(stored);
-        
-        // Check if stored session is expired
-        const now = Date.now();
-        const timeSinceStart = now - currentSessionInfo.startTime;
-        const timeSinceLastActivity = now - currentSessionInfo.lastActivity;
-        
-        if (timeSinceStart > SESSION_TIMEOUT || timeSinceLastActivity > INACTIVITY_TIMEOUT) {
-          // Session expired, create new one
-          currentSessionInfo = {
-            sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            startTime: now,
-            lastActivity: now,
-            isExpired: false,
-            timeRemaining: SESSION_TIMEOUT
-          };
-        }
-      } catch (error) {
-        console.warn('Failed to parse stored session, creating new one:', error);
-        currentSessionInfo = {
-          sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          startTime: Date.now(),
-          lastActivity: Date.now(),
-          isExpired: false,
-          timeRemaining: SESSION_TIMEOUT
-        };
+    console.log('Creating new session on page load:', currentSessionInfo.sessionId);
+    
+    // Clear any old movie memory from previous sessions
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('movieMemory_')) {
+        sessionStorage.removeItem(key);
       }
-    } else {
-      // No stored session, create new one
-      currentSessionInfo = {
-        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        startTime: Date.now(),
-        lastActivity: Date.now(),
-        isExpired: false,
-        timeRemaining: SESSION_TIMEOUT
-      };
-    }
+    });
     
     setSessionInfo(currentSessionInfo);
     sessionStorage.setItem('movieRecommenderSession', JSON.stringify(currentSessionInfo));

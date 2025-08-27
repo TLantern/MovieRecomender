@@ -7,7 +7,7 @@ This system automatically logs all movie recommendations and provides tools to d
 ### 🔍 Automatic Session-Based Logging
 - **New session file on each page refresh**: Every time a user refreshes the page, a completely new log file is created
 - **Session isolation**: Each session is completely separate with no shared movie history
-- **Automatic duplicate prevention**: Previously recommended titles from ALL sessions are automatically excluded
+- **Session-based duplicate prevention**: Previously recommended titles within the current session are automatically excluded
 - **Logs are stored in JSON format** in the `results/` directory with timestamped filenames
 - **Works in both development and production environments**
 
@@ -33,7 +33,7 @@ This system automatically logs all movie recommendations and provides tools to d
 1. **Page Refresh**: Each time a user refreshes the page, a new session begins
 2. **New Log File**: A new timestamped log file is created (e.g., `recommendation-session-2024-01-15T10-30-45-123Z.json`)
 3. **Fresh Start**: The new session starts with no movie memory from previous sessions
-4. **Automatic Exclusion**: The system automatically excludes ALL previously recommended movies from ALL previous sessions
+4. **Session-based Exclusion**: The system automatically excludes movies recommended within the current session only
 
 ### Session Boundaries
 - **Start**: Page refresh or new browser tab
@@ -105,11 +105,11 @@ Navigate to `/admin` in your browser to access the full admin interface.
    - Each file contains only the recommendations from that specific session
    - Files are named with timestamps for easy identification
 
-2. **Duplicate Prevention**: 
-   - When making recommendations, the system reads ALL session files
-   - Creates a comprehensive exclusion list of all previously recommended titles
-   - Automatically excludes these titles from new recommendations
-   - Ensures no movie is ever recommended twice across any session
+2. **Session-based Duplicate Prevention**: 
+   - When making recommendations, the system tracks movies recommended in the current session
+   - Creates an exclusion list of titles recommended within the current session only
+   - Automatically excludes these titles from subsequent recommendations in the same session
+   - Ensures no movie is recommended twice within a single session
 
 3. **Real-time Analysis**: All data is available immediately through:
    - API endpoints for programmatic access
@@ -119,7 +119,7 @@ Navigate to `/admin` in your browser to access the full admin interface.
 ## Benefits
 
 - **Complete Session Isolation**: Each page refresh starts completely fresh
-- **Automatic Duplicate Prevention**: No movie can be recommended twice across any session
+- **Session-based Duplicate Prevention**: No movie can be recommended twice within the same session
 - **Quality Assurance**: Ensure variety in movie recommendations across all users
 - **User Experience**: Maintain freshness and variety in suggestions
 - **Debugging**: Track down issues with specific sessions and moods

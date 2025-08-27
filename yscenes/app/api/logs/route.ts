@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           totalExcludeTitles: excludeTitles.length,
           excludeTitles: excludeTitles,
-          message: 'These titles should be excluded from future recommendations to prevent duplicates'
+          message: 'These titles from ALL sessions can be excluded for comprehensive duplicate prevention (Note: Current system only excludes within current session)'
         });
         
       case 'session-files':

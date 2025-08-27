@@ -61,34 +61,10 @@ export async function POST(request: NextRequest) {
     const sessionSeed = sessionId ? hashString(sessionId) : Date.now();
     const randomOffset = (sessionSeed % 100) / 100; // 0-1 range
 
-    // Get previously recommended titles to exclude them and prevent duplicates
-    let previouslyRecommendedTitles: string[] = [];
-    try {
-      const excludeResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/logs?action=exclude-titles`);
-      if (excludeResponse.ok) {
-        const excludeData = await excludeResponse.json();
-        previouslyRecommendedTitles = excludeData.excludeTitles || [];
-        console.log(`Excluding ${previouslyRecommendedTitles.length} previously recommended titles to prevent duplicates`);
-      }
-    } catch (error) {
-      console.warn('Could not fetch previously recommended titles for exclusion:', error);
-    }
-
-    // Combine user-provided exclusions with previously recommended titles
+    // Use only the current session's exclude list (passed from frontend)
+    // This ensures we only prevent duplicates within the current session, not across all sessions
     const allExcludeMovies = [...excludeMovies];
-    
-    // Add previously recommended titles to exclusion list
-    previouslyRecommendedTitles.forEach(titleWithYear => {
-      // Extract title and year from "Title (Year)" format
-      const match = titleWithYear.match(/^(.+?)\s*\((\d{4})\)$/);
-      if (match) {
-        const [, title, year] = match;
-        allExcludeMovies.push({
-          title: title.trim(),
-          year: parseInt(year)
-        });
-      }
-    });
+    console.log(`Excluding ${excludeMovies.length} titles from current session to prevent duplicates`);
 
     // Try to call the FastAPI backend first
     let data;
@@ -154,10 +130,11 @@ export async function POST(request: NextRequest) {
         }
       ];
       
-      // Filter out previously recommended movies from fallback data
+      // Filter out current session movies from fallback data
       const filteredFallbackMovies = fallbackMovies.filter(movie => {
-        const titleKey = `${movie.title} (${movie.year})`;
-        return !previouslyRecommendedTitles.includes(titleKey);
+        return !allExcludeMovies.some(excluded => 
+          excluded.title === movie.title && excluded.year === movie.year
+        );
       });
       
       // If all fallback movies were filtered out, add some generic ones
@@ -210,8 +187,8 @@ export async function POST(request: NextRequest) {
       movies: transformedMovies,
       mood: mood,
       sessionId: sessionId, // Return session ID for frontend tracking
-      excludedCount: previouslyRecommendedTitles.length, // Return count of excluded titles
-      message: `Excluded ${previouslyRecommendedTitles.length} previously recommended titles to prevent duplicates`
+      excludedCount: excludeMovies.length, // Return count of excluded titles from current session
+      message: `Excluded ${excludeMovies.length} titles from current session to prevent duplicates`
     });
 
   } catch (error) {

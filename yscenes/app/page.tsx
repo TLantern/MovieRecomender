@@ -6,6 +6,7 @@ import Navbar from '../components/navbar';
 import SearchBar from '../components/search-bar';
 import ActorCarousel from '../components/actor-carousel';
 import Bookmark from '../components/bookmark';
+import MovieModal from '../components/movie-modal';
 import { useSessionMemory } from '../hooks/useSessionMemory';
 // import { useMovies } from '../hooks/useMovies';
 
@@ -40,6 +41,8 @@ export default function Home() {
   const [currentYearRange, setCurrentYearRange] = useState<[number, number]>([1970, 2025]);
   const [selectedActor, setSelectedActor] = useState<string>('');
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
+  const [selectedMovie, setSelectedMovie] = useState<MovieResult | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Auto-start fresh session if current one is expired
   useEffect(() => {
@@ -56,9 +59,9 @@ export default function Home() {
     setCurrentMood(mood);
     setCurrentYearRange(yearRange);
 
-    // Start fresh session for new search to prevent duplicates
-    const newSessionId = startFreshSession();
-    console.log('Started new search session:', newSessionId);
+    // Use existing session - don't create new session for new search
+    // New sessions are only created on page refresh or session expiry
+    console.log('Using existing session for new search:', sessionId);
 
     try {
       const res = await fetch('/api/recommend', {
@@ -69,8 +72,8 @@ export default function Home() {
           yearRange,
           actor,
           isFirstRecommendation: true,  // Flag for fan favourites
-          sessionId: newSessionId, // Use new session ID
-          excludeMovies: [] // Start with empty exclusion list for new search
+          sessionId: sessionId, // Use current session ID
+          excludeMovies: getExclusionList() // Include previously recommended movies in current session
         })
       });
       
@@ -181,6 +184,16 @@ export default function Home() {
       console.error(e);
       setBottomEmailMessage("Oops, try again later.");
     }
+  };
+
+  const handleWatchClick = (movie: MovieResult) => {
+    setSelectedMovie(movie);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedMovie(null);
   };
 
   return (
@@ -393,14 +406,12 @@ export default function Home() {
                       <p className="text-gray-300 text-sm mb-3 flex-grow text-center leading-relaxed font-body">{movie.description}</p>
                       
                       {/* Watch button */}
-                      <a 
-                        href={movie.stream_link} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-400 transition-colors duration-200 mt-auto text-center font-medium hover:scale-105 transform transition-transform"
+                      <button
+                        onClick={() => handleWatchClick(movie)}
+                        className="text-blue-500 hover:text-blue-400 transition-colors duration-200 mt-auto text-center font-medium hover:scale-105 transform transition-transform cursor-pointer bg-transparent border-none"
                       >
                         ▶️ Watch here
-                      </a>
+                      </button>
                     </div>
                   </div>
                 );
@@ -472,6 +483,15 @@ export default function Home() {
         )} */}
         
       </main>
+      
+      {/* Movie Modal */}
+      {selectedMovie && (
+        <MovieModal
+          movie={selectedMovie}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 }
