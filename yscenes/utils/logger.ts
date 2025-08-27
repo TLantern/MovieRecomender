@@ -23,23 +23,40 @@ interface RecommendationLog {
 
 export class RecommendationLogger {
   private resultsDir: string;
+  private isServerless: boolean;
 
   constructor() {
-    // Use process.cwd() but ensure we're in the right directory
-    this.resultsDir = path.join(process.cwd(), 'results');
-    this.ensureResultsDir();
+    // Check if we're in a serverless environment
+    this.isServerless = Boolean(process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NODE_ENV === 'production');
+    
+    if (this.isServerless) {
+      // In serverless, disable file logging completely
+      this.resultsDir = '';
+      console.log('Logger: Serverless environment detected, file logging disabled');
+    } else {
+      // Use process.cwd() but ensure we're in the right directory
+      this.resultsDir = path.join(process.cwd(), 'results');
+      this.ensureResultsDir();
+    }
   }
 
   private ensureResultsDir(): void {
+    if (this.isServerless) return;
+    
     console.log('Logger: Current working directory:', process.cwd());
     console.log('Logger: Results directory:', this.resultsDir);
     
-    if (!fs.existsSync(this.resultsDir)) {
-      console.log('Logger: Creating results directory...');
-      fs.mkdirSync(this.resultsDir, { recursive: true });
-      console.log('Logger: Results directory created successfully');
-    } else {
-      console.log('Logger: Results directory already exists');
+    try {
+      if (!fs.existsSync(this.resultsDir)) {
+        console.log('Logger: Creating results directory...');
+        fs.mkdirSync(this.resultsDir, { recursive: true });
+        console.log('Logger: Results directory created successfully');
+      } else {
+        console.log('Logger: Results directory already exists');
+      }
+    } catch (error) {
+      console.warn('Logger: Could not create results directory:', error);
+      this.resultsDir = '';
     }
   }
 
@@ -68,6 +85,12 @@ export class RecommendationLogger {
         backendAvailable
       };
 
+      // If no results directory (serverless), just log to console
+      if (!this.resultsDir) {
+        console.log('Recommendation (console only):', JSON.stringify(logEntry, null, 2));
+        return;
+      }
+
       const filename = this.generateFilename();
       const filepath = path.join(this.resultsDir, filename);
 
@@ -87,6 +110,11 @@ export class RecommendationLogger {
 
   async getRecentLogs(limit: number = 10): Promise<RecommendationLog[]> {
     try {
+      // If no results directory (serverless), return empty array
+      if (!this.resultsDir) {
+        return [];
+      }
+
       const files = fs.readdirSync(this.resultsDir);
       const jsonFiles = files.filter(file => file.endsWith('.json'));
       
@@ -120,6 +148,16 @@ export class RecommendationLogger {
     backendUsage: { backend: number; fallback: number };
   }> {
     try {
+      // If no results directory (serverless), return empty stats
+      if (!this.resultsDir) {
+        return {
+          totalRecommendations: 0,
+          totalMovies: 0,
+          moods: {},
+          backendUsage: { backend: 0, fallback: 0 }
+        };
+      }
+
       const files = fs.readdirSync(this.resultsDir);
       const jsonFiles = files.filter(file => file.endsWith('.json'));
       
