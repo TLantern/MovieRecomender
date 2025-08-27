@@ -4,18 +4,63 @@ import React, { useState } from 'react';
 
 interface BookmarkProps {
   movieId: string;
+  title: string;
+  year: number;
+  poster_url?: string;
+  rating_out_of_10?: number;
+  description?: string;
   isBookmarked?: boolean;
   onToggle?: (movieId: string, isBookmarked: boolean) => void;
 }
 
-const Bookmark: React.FC<BookmarkProps> = ({ movieId, isBookmarked = false, onToggle }) => {
+const Bookmark: React.FC<BookmarkProps> = ({ 
+  movieId, 
+  title, 
+  year, 
+  poster_url, 
+  rating_out_of_10, 
+  description,
+  isBookmarked = false, 
+  onToggle 
+}) => {
   const [isChecked, setIsChecked] = useState(isBookmarked);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleToggle = () => {
-    const newState = !isChecked;
-    setIsChecked(newState);
-    if (onToggle) {
-      onToggle(movieId, newState);
+  const handleToggle = async () => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/bookmarks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          movieId,
+          title,
+          year,
+          poster_url,
+          rating_out_of_10,
+          description
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newState = data.bookmarked;
+        setIsChecked(newState);
+        
+        if (onToggle) {
+          onToggle(movieId, newState);
+        }
+      } else {
+        console.error('Failed to toggle bookmark');
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 

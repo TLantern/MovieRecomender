@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -40,45 +40,59 @@ export default function Navbar() {
             <div className="flex items-baseline space-x-8">
               <Link 
                 href="/" 
-                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+                className="text-white font-semibold px-3 py-2 rounded-md text-sm relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
               >
                 Home
               </Link>
               <Link 
                 href="/movies" 
-                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+                className="text-white font-semibold px-3 py-2 rounded-md text-sm relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
               >
                 Movies
               </Link>
               <Link 
-                href="/recommendations" 
-                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+                href="/bookmarks" 
+                className="text-white font-semibold px-3 py-2 rounded-md text-sm relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
               >
-                Recommendations
+                Bookmarks
               </Link>
               <Link 
                 href="/about" 
-                className="text-white/90 px-3 py-2 rounded-md text-sm font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+                className="text-white font-semibold px-3 py-2 rounded-md text-sm relative after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
               >
                 About
               </Link>
             </div>
           </div>
 
-          {/* Clerk Authentication Buttons - Right side */}
-          <div className="absolute right-20 sm:right-24 lg:right-28">
+          {/* Authentication Buttons - Right side */}
+          <div className="absolute right-4 sm:right-6 lg:right-8">
             <SignedOut>
-              <SignUpButton mode="modal">
-                <button className="inline-flex items-center overflow-hidden rounded-full bg-black/70 backdrop-blur [--size:48px] [--pad:6px] [--gap:10px] px-[var(--pad)] py-[var(--pad)] w-[calc(var(--size)+var(--pad)*2)] transition-[width] duration-300 ease-out focus-visible:outline-none hover:w-max focus-visible:w-max">
-                  <svg className="w-[var(--size)] h-[var(--size)] shrink-0 transition-transform duration-700 ease-in-out group-hover:rotate-360 mt-4 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="whitespace-nowrap text-white font-semibold text-xl translate-x-3 opacity-0 transition duration-600 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 ml-[var(--gap)] relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-300 group-hover:after:w-full group-focus-visible:after:w-full font-heading">
+              <div className="flex items-center space-x-3">
+                {/* Sign Up Button */}
+                <SignUpButton mode="modal">
+                  <button className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-100 transition-all duration-200 hover:scale-105 font-medium">
                     Sign Up
-                  </span>
-                </button>
-              </SignUpButton>
+                  </button>
+                </SignUpButton>
+                
+                {/* Google Sign In Button */}
+                <a 
+                  href="https://accounts.google.com/o/oauth2/auth/oauthchooseaccount?access_type=offline&client_id=787459168867-0v2orf3qo56uocsi84iroseoahhuovdm.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fclerk.shared.lcl.dev%2Fv1%2Foauth_callback&response_type=code&scope=openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&state=ne4nrck6reyx2a0qzofovvpe6ul1iyn8i6q0nfkp&service=lso&o2v=1&flowName=GeneralOAuthFlow"
+                  className="px-4 py-2 bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-lg hover:bg-white/20 transition-all duration-200 hover:scale-105 flex items-center space-x-2"
+                >
+                  <Image
+                    src="/google.png"
+                    alt="Google"
+                    width={16}
+                    height={16}
+                    className="w-4 h-4"
+                  />
+                  <span>Google</span>
+                </a>
+              </div>
             </SignedOut>
+            
             <SignedIn>
               <UserButton 
                 appearance={{
@@ -143,28 +157,28 @@ export default function Navbar() {
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-black/80 backdrop-blur-md">
           <Link 
             href="/" 
-            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+            className="text-white font-semibold block px-3 py-2 rounded-md text-base relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             onClick={() => setIsMenuOpen(false)}
           >
             Home
           </Link>
           <Link 
             href="/movies" 
-            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+            className="text-white font-semibold block px-3 py-2 rounded-md text-base relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             onClick={() => setIsMenuOpen(false)}
           >
             Movies
           </Link>
           <Link 
-            href="/recommendations" 
-            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+            href="/bookmarks" 
+            className="text-white font-semibold block px-3 py-2 rounded-md text-base relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             onClick={() => setIsMenuOpen(false)}
           >
-            Recommendations
+            Bookmarks
           </Link>
           <Link 
             href="/about" 
-            className="text-white/90 block px-3 py-2 rounded-md text-base font-medium relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+            className="text-white font-semibold block px-3 py-2 rounded-md text-base relative after:content-[''] after:absolute after:bottom-1 after:left-0 after:w-0 after:h-px after:bg-white after:transition-all after:duration-300 after:delay-100 hover:after:w-full transition-transform duration-200 hover:scale-105 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             onClick={() => setIsMenuOpen(false)}
           >
             About

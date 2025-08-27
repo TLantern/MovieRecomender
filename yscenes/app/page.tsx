@@ -288,14 +288,19 @@ export default function Home() {
                         </div>
                       )}
                       
-                      {/* Bookmark - Top left corner */}
-                      <div className="absolute top-3 left-3 z-20">
-                        <Bookmark
-                          movieId={`${movie.title}-${movie.year}`}
-                          isBookmarked={bookmarks[`${movie.title}-${movie.year}`] || false}
-                          onToggle={handleBookmarkToggle}
-                        />
-                      </div>
+                                        {/* Bookmark - Top left corner */}
+                  <div className="absolute top-3 left-3 z-20">
+                    <Bookmark
+                      movieId={`${movie.title}-${movie.year}`}
+                      title={movie.title}
+                      year={movie.year}
+                      poster_url={movie.poster_url}
+                      rating_out_of_10={movie.rating_out_of_10}
+                      description={movie.description}
+                      isBookmarked={bookmarks[`${movie.title}-${movie.year}`] || false}
+                      onToggle={handleBookmarkToggle}
+                    />
+                  </div>
                       
                       <div className="relative z-10 h-full flex flex-col">
                       {/* Rating at the top */}
@@ -350,7 +355,7 @@ export default function Home() {
             
             {/* More Button - only show when there are results */}
             {searchResults.length > 0 && (
-              <div className="text-center mt-16 mb-20">
+              <div className="text-center mt-16 mb-20 flex justify-center">
                 <button 
                   onClick={handleMoreRecommendations}
                   disabled={moreLoading}
