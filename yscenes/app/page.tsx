@@ -490,6 +490,8 @@ export default function Home() {
           movie={selectedMovie}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
+          isBookmarked={bookmarks[`${selectedMovie.title}-${selectedMovie.year}`] || false}
+          onBookmarkToggle={handleBookmarkToggle}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface BookmarkProps {
   movieId: string;
@@ -25,6 +25,11 @@ const Bookmark: React.FC<BookmarkProps> = ({
 }) => {
   const [isChecked, setIsChecked] = useState(isBookmarked);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Update internal state when prop changes
+  useEffect(() => {
+    setIsChecked(isBookmarked);
+  }, [isBookmarked]);
 
   const handleToggle = async () => {
     if (isLoading) return;
@@ -69,12 +74,16 @@ const Bookmark: React.FC<BookmarkProps> = ({
       <input 
         type="checkbox" 
         checked={isChecked}
-        onChange={handleToggle}
+        onChange={() => {}} 
         className="hidden"
       />
-      <div className={`bookmark transition-all duration-600 ${
-        isChecked ? 'fill-yellow-400' : 'fill-gray-400 hover:fill-gray-300'
-      }`}>
+      <div 
+        className="bookmark transition-all duration-600"
+        onClick={handleToggle}
+        style={{
+          fill: isChecked ? 'rgb(250, 204, 21)' : 'rgb(156, 163, 175)'
+        }}
+      >
         <svg viewBox="0 0 32 32" className="w-6 h-6">
           <g>
             <path d="M27 4v27a1 1 0 0 1-1.625.781L16 24.281l-9.375 7.5A1 1 0 0 1 5 31V4a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4z" />
@@ -130,10 +139,6 @@ const Bookmark: React.FC<BookmarkProps> = ({
           opacity: 0;
         }
 
-        .ui-bookmark:hover .bookmark {
-          fill: var(--icon-hover-color);
-        }
-
         .ui-bookmark input:checked + .bookmark::after {
           animation: circles var(--icon-anmt-duration)
             cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
@@ -141,7 +146,6 @@ const Bookmark: React.FC<BookmarkProps> = ({
         }
 
         .ui-bookmark input:checked + .bookmark {
-          fill: var(--icon-primary-color);
           animation: bookmark var(--icon-anmt-duration) forwards;
           transition-delay: 0.3s;
         }

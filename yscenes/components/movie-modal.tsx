@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Bookmark from './bookmark';
 
 interface MovieModalProps {
   movie: {
@@ -14,6 +15,8 @@ interface MovieModalProps {
   };
   isOpen: boolean;
   onClose: () => void;
+  isBookmarked?: boolean;
+  onBookmarkToggle?: (movieId: string, isBookmarked: boolean) => void;
 }
 
 interface WatchProvider {
@@ -30,7 +33,7 @@ interface WatchProvidersData {
   buy?: WatchProvider[];
 }
 
-export default function MovieModal({ movie, isOpen, onClose }: MovieModalProps) {
+export default function MovieModal({ movie, isOpen, onClose, isBookmarked, onBookmarkToggle }: MovieModalProps) {
   const [watchProviders, setWatchProviders] = useState<WatchProvidersData>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +151,22 @@ export default function MovieModal({ movie, isOpen, onClose }: MovieModalProps) 
           style={{ width: 'min(95vw, calc(90vh * 12 / 16))', height: 'min(90vh, calc(95vw * 16 / 12))' }}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Bookmark button */}
+          {onBookmarkToggle && (
+            <div className="absolute top-4 left-4 z-10">
+              <Bookmark
+                movieId={`${movie.title}-${movie.year}`}
+                title={movie.title}
+                year={movie.year}
+                poster_url={movie.poster_url}
+                rating_out_of_10={movie.rating_out_of_10}
+                description={movie.description}
+                isBookmarked={isBookmarked || false}
+                onToggle={onBookmarkToggle}
+              />
+            </div>
+          )}
+
           {/* Close button */}
           <button
             onClick={onClose}
