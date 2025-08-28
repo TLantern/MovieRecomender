@@ -39,16 +39,60 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
     "Want to be inspired and motivated"
   ];
 
-  const aiMoodSuggestions = [
-    "Heartwarming and cozy like a warm hug on a cold day",
-    "Gritty and intense with unexpected emotional depth",
-    "Quirky comedy that makes you think while you laugh",
-    "Mind-bending sci-fi that questions reality itself",
-    "Dark mystery with a glimmer of hope at the end",
-    "Epic fantasy adventure with stunning visuals",
-    "Intimate character study about human connection",
-    "Thrilling heist with clever twists and turns"
+  // Dynamically fetch AI mood suggestions from ChatGPT (cheap model) using these as examples
+  const aiMoodExamples = [
+    "Need something scary but still heartwarming",
+    "Feeling nostalgic for the 90s",
+    "Want to laugh until I cry",
+    "In the mood for a mind-bending thriller",
+    "Something romantic but not cheesy",
+    "Need an epic adventure to escape reality",
+    "Feeling philosophical and deep",
+    "Want to be inspired and motivated"
   ];
+
+  // State for AI-generated mood suggestions
+  const [aiMoodSuggestions, setAiMoodSuggestions] = useState<string[]>([]);
+  const [isLoadingAiSuggestions, setIsLoadingAiSuggestions] = useState(false);
+
+  async function fetchAIMoodSuggestions(): Promise<string[]> {
+    // This function should call your backend API that wraps OpenAI's cheap model (gpt-3.5-turbo)
+    // and returns a list of creative mood prompts for movies, using aiMoodExamples as inspiration.
+    // Example prompt for the backend:
+    // "Give me 8 creative, diverse, and cinematic moods for movie watching, similar to these: [examples]. Each should be a short phrase or sentence."
+    try {
+      const res = await fetch('/api/ai-mood-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examples: aiMoodExamples })
+      });
+      if (!res.ok) throw new Error('Failed to fetch AI mood suggestions');
+      const data = await res.json();
+      return data.suggestions as string[];
+    } catch (err) {
+      // Fallback to examples if API fails
+      return aiMoodExamples;
+    }
+  }
+
+  // Fetch AI mood suggestions on component mount
+  useEffect(() => {
+    const loadAiSuggestions = async () => {
+      setIsLoadingAiSuggestions(true);
+      try {
+        const suggestions = await fetchAIMoodSuggestions();
+        setAiMoodSuggestions(suggestions);
+      } catch (error) {
+        console.error('Failed to load AI mood suggestions:', error);
+        // Fallback to examples if API fails
+        setAiMoodSuggestions(aiMoodExamples);
+      } finally {
+        setIsLoadingAiSuggestions(false);
+      }
+    };
+
+    loadAiSuggestions();
+  }, []);
 
   useEffect(() => {
     // Don't show animated placeholder if there's text in the textarea
@@ -158,8 +202,9 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
     setShowEnterPrompt(false);
     setTypingIndex(0);
     
-    // Select random AI suggestion
-    const randomSuggestion = aiMoodSuggestions[Math.floor(Math.random() * aiMoodSuggestions.length)];
+    // Use AI-generated suggestions if available, otherwise fallback to examples
+    const availableSuggestions = aiMoodSuggestions.length > 0 ? aiMoodSuggestions : aiMoodExamples;
+    const randomSuggestion = availableSuggestions[Math.floor(Math.random() * availableSuggestions.length)];
     setTypingText(randomSuggestion);
     setIsTypingSuggestion(true);
   };
