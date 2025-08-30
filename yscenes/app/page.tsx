@@ -8,6 +8,8 @@ import ActorCarousel from '../components/actor-carousel';
 import Bookmark from '../components/bookmark';
 import MovieModal from '../components/movie-modal';
 import { useSessionMemory } from '../hooks/useSessionMemory';
+import SocialsButton from '../components/socials';
+import Footer from '../components/footer';
 // import { useMovies } from '../hooks/useMovies';
 
 interface MovieResult {
@@ -213,7 +215,7 @@ export default function Home() {
                 <SearchBar onSearch={handleSearch} loading={searchLoading} selectedActor={selectedActor} />
               </div>
             </div>
-
+          
             {/* Side Card - Favourite Actors */}
             {/* <div className="bg-blue-900/80 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/30 relative flex-1 max-w-md drop-shadow-[0_0_30px_rgba(59,130,246,0.2)]">
               <div className="absolute inset-0 bg-white/5 rounded-xl blur-xl"></div>
@@ -297,7 +299,7 @@ export default function Home() {
           {/* Top Email Form - positioned below main card when no results are displayed */}
           {!showResults && (
             <div className="text-center mt-6 max-w-6xl mx-auto">
-              <div className="relative z-10 text-center">
+              <div className="relative z-10 text-center mb-10">
                 <input 
                   type="email" 
                   placeholder="Your email for weekly picks" 
@@ -324,104 +326,118 @@ export default function Home() {
         
         {/* Search Results */}
         {showResults && (
-          <div className="container mx-auto px-4 max-w-6xl mt-16">
+          <div className="container mx-auto px-4 max-w-6xl mt-4">
             {searchLoading ? (
               <div className="text-center py-8">
                 {/* From Uiverse.io by Donewenfu */}
-                <p className="text-white text-lg font-body">Finding your Perfect Movie</p>
+                <p className="text-white text-lg font-body font-bold drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">Finding your Perfect Movie</p>
                 <div className="loader mt-4">
                   <div className="jimu-primary-loading"></div>
                 </div>
               </div>
             ) : searchResults.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {searchResults.map((movie, index) => {
-                  // Check if this is the first recommendation and the middle card (index 1)
-                  const isMasterpiece = searchResults.length === 3 && index === 1 && !currentMood.includes('more');
-                  
-                  return (
-                                        <div 
-                      key={index} 
-                      className={`bg-black/85 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/30 relative flex-1 max-w-md transition-all duration-300 ease-out cursor-pointer ${
-                        isMasterpiece 
-                          ? 'drop-shadow-[0_0_40px_rgba(147,51,234,0.4)] hover:drop-shadow-[0_0_50px_rgba(147,51,234,0.6)] hover:scale-105 hover:border-purple-400/50' 
-                          : 'drop-shadow-[0_0_30px_rgba(59,130,246,0.2)] hover:drop-shadow-[0_0_40px_rgba(59,130,246,0.3)] hover:scale-103 hover:border-white/40'
-                      }`}
-                    >
-                      <div className="absolute inset-0 bg-white/3 rounded-xl blur-xl"></div>
-                      
-                      {/* Fan Favourite Label - Only for masterpiece (middle card) */}
-                      {isMasterpiece && (
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-20">
-                          <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-3 py-1.5 rounded-full shadow-lg border-2 border-yellow-300 flex items-center gap-2 font-bold text-sm">
-                            <span className="text-yellow-600">⭐</span>
-                            <span className="font-heading">Fan Favourite</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                                        {/* Bookmark - Top left corner */}
-                  <div className="absolute top-3 left-3 z-20">
-                    <Bookmark
-                      movieId={`${movie.title}-${movie.year}`}
-                      title={movie.title}
-                      year={movie.year}
-                      poster_url={movie.poster_url}
-                      rating_out_of_10={movie.rating_out_of_10}
-                      description={movie.description}
-                      isBookmarked={bookmarks[`${movie.title}-${movie.year}`] || false}
-                      onToggle={handleBookmarkToggle}
-                    />
+              <>
+                {/* Social Media Links above movie results */}
+                <div className="flex justify-center mb-8">
+                  <div className="flex flex-col items-center w-full">
+                    <h1 className="text-white text-lg font-body font-bold drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] -mb-5 mt-6">
+                      Compare your Top 3 with your friends, who wins?                    
+                      </h1>
+                    <SocialsButton movies={searchResults} mood={currentMood} username="MovieLover" />
                   </div>
-                      
-                      <div className="relative z-10 h-full flex flex-col">
-                      {/* Rating at the top */}
-                      <div className="flex items-center justify-end mb-3">
-                        <div className="flex items-center bg-blue-600/80 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                          <span className="text-yellow-400 mr-1 text-sm">★</span>
-                          <span className="text-white text-sm font-light font-body">{Number(movie.rating_out_of_10).toFixed(1)}/10</span>
-                        </div>
-                      </div>
-                      
-                      {/* Movie Title */}
-                      <h4 className="text-lg font-semibold text-white mb-3 text-center font-heading">
-                        {movie.title} ({movie.year})
-                      </h4>
-                      
-                      {/* Movie Poster - 9:16 aspect ratio */}
-                      <div className="relative w-full mb-3">
-                        <div className="aspect-[9/16] w-full max-w-[200px] mx-auto">
-                          <img 
-                            src={movie.poster_url || 'https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop'} 
-                            alt={`${movie.title} poster`}
-                            className="w-full h-full object-cover rounded-lg shadow-lg"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop';
-                            }}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {searchResults.map((movie, index) => {
+                    // Check if this is the first recommendation and the middle card (index 1)
+                    const isMasterpiece = searchResults.length === 3 && index === 1 && !currentMood.includes('more');
+                    
+                    return (
+                      <div 
+                        key={index} 
+                        className={`bg-black/85 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/30 relative flex-1 max-w-md transition-all duration-300 ease-out cursor-pointer ${
+                          isMasterpiece 
+                            ? 'drop-shadow-[0_0_40px_rgba(147,51,234,0.4)] hover:drop-shadow-[0_0_50px_rgba(147,51,234,0.6)] hover:scale-105 hover:border-purple-400/50' 
+                            : 'drop-shadow-[0_0_30px_rgba(59,130,246,0.2)] hover:drop-shadow-[0_0_40px_rgba(59,130,246,0.3)] hover:scale-103 hover:border-white/40'
+                        }`}
+                      >
+                        <div className="absolute inset-0 bg-white/3 rounded-xl blur-xl"></div>
+                        
+                        {/* Fan Favourite Label - Only for masterpiece (middle card) */}
+                        {isMasterpiece && (
+                          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-20">
+                            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-3 py-1.5 rounded-full shadow-lg border-2 border-yellow-300 flex items-center gap-2 font-bold text-sm">
+                              <span className="text-yellow-600">⭐</span>
+                              <span className="font-heading">Fan Favourite</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Bookmark - Top left corner */}
+                        <div className="absolute top-3 left-3 z-20">
+                          <Bookmark
+                            movieId={`${movie.title}-${movie.year}`}
+                            title={movie.title}
+                            year={movie.year}
+                            poster_url={movie.poster_url}
+                            rating_out_of_10={movie.rating_out_of_10}
+                            description={movie.description}
+                            isBookmarked={bookmarks[`${movie.title}-${movie.year}`] || false}
+                            onToggle={handleBookmarkToggle}
                           />
                         </div>
+                        
+                        <div className="relative z-10 h-full flex flex-col">
+                          {/* Rating at the top */}
+                          <div className="flex items-center justify-end mb-3">
+                            <div className="flex items-center bg-blue-600/80 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                              <span className="text-yellow-400 mr-1 text-sm">★</span>
+                              <span className="text-white text-sm font-light font-body">{Number(movie.rating_out_of_10).toFixed(1)}/10</span>
+                            </div>
+                          </div>
+                          
+                          {/* Movie Title */}
+                          <h4 className="text-lg font-semibold text-white mb-3 text-center font-heading">
+                            {movie.title} ({movie.year})
+                          </h4>
+                          
+                          {/* Movie Poster - 9:16 aspect ratio */}
+                          <div className="relative w-full mb-3">
+                            <div className="aspect-[9/16] w-full max-w-[200px] mx-auto">
+                              <img 
+                                src={movie.poster_url || 'https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop'} 
+                                alt={`${movie.title} poster`}
+                                className="w-full h-full object-cover rounded-lg shadow-lg"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop';
+                                }}
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Description */}
+                          <p className="text-gray-300 text-sm mb-3 flex-grow text-center leading-relaxed font-body">{movie.description}</p>
+                          
+                          {/* Watch button */}
+                          <button
+                            onClick={() => handleWatchClick(movie)}
+                            className="text-blue-500 hover:text-blue-400 transition-colors duration-200 mt-auto text-center font-medium hover:scale-105 transform transition-transform cursor-pointer bg-transparent border-none"
+                          >
+                            ▶️ Watch here
+                          </button>
+                        </div>
                       </div>
-                      
-                      {/* Description */}
-                      <p className="text-gray-300 text-sm mb-3 flex-grow text-center leading-relaxed font-body">{movie.description}</p>
-                      
-                      {/* Watch button */}
-                      <button
-                        onClick={() => handleWatchClick(movie)}
-                        className="text-blue-500 hover:text-blue-400 transition-colors duration-200 mt-auto text-center font-medium hover:scale-105 transform transition-transform cursor-pointer bg-transparent border-none"
-                      >
-                        ▶️ Watch here
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-8 mb-32">
                 <p className="text-gray-600 dark:text-gray-300">No recommendations found. Try a different mood!</p>
               </div>
             )}
+            
+
             
             {/* Email Form - positioned above More Recommendations button */}
             {showResults && (
@@ -452,7 +468,7 @@ export default function Home() {
             
             {/* More Button - only show when there are results */}
             {searchResults.length > 0 && (
-              <div className="text-center mt-8 mb-20 flex justify-center">
+              <div className="text-center mt-8 mb-32 flex justify-center">
                 <button 
                   onClick={handleMoreRecommendations}
                   disabled={moreLoading}
@@ -465,7 +481,7 @@ export default function Home() {
                 </button>
               </div>
             )}
-                    </div>
+          </div>
         )}
         
         {/* Trending Movies Carousel - Commented Out */}
@@ -487,13 +503,14 @@ export default function Home() {
       {/* Movie Modal */}
       {selectedMovie && (
         <MovieModal
-          movie={selectedMovie}
+          movie={selectedMovie!}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
-          isBookmarked={bookmarks[`${selectedMovie.title}-${selectedMovie.year}`] || false}
+          isBookmarked={bookmarks[`${selectedMovie!.title}-${selectedMovie!.year}`] || false}
           onBookmarkToggle={handleBookmarkToggle}
         />
       )}
+      <Footer />
     </div>
   );
 }

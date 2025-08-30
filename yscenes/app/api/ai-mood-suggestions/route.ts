@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `Generate a list of unique movie-watching moods. Each mood should be short (1 sentence or phrase), emotionally evocative, and specific enough to guide a recommendation engine. The tone should feel conversational and human, not like categories or genres. Examples: 'Something scary but still heartwarming,' 'Feeling nostalgic for the 90s,' 'Want to laugh until I cry,' 'In the mood for a mind-bending thriller,' 'Something romantic but not cheesy,' 'Need an epic adventure to escape reality,' 'Feeling philosophical and deep,' 'Want to be inspired and motivated.'`;
+    const prompt = `Generate a list of unique movie-watching moods. Each mood should be short (1 sentence or phrase), emotionally evocative, and specific enough to guide a recommendation engine. The tone should feel conversational and human, not like categories or genres. Examples: 'Something scary but still heartwarming,' 'Feeling nostalgic for the 90s,' 'Want to laugh until I cry,' 'In the mood for a mind-bending thriller,' 'Something romantic but not cheesy,' 'Need an epic adventure to escape reality,' 'Feeling philosophical and deep,' 'Want to be inspired and motivated.', dont use - in answers`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
