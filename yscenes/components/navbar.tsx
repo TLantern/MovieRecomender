@@ -77,19 +77,18 @@ export default function Navbar() {
                 </SignUpButton>
                 
                 {/* Google Sign In Button */}
-                <a 
-                  href="https://accounts.google.com/o/oauth2/auth/oauthchooseaccount?access_type=offline&client_id=787459168867-0v2orf3qo56uocsi84iroseoahhuovdm.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fclerk.shared.lcl.dev%2Fv1%2Foauth_callback&response_type=code&scope=openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&state=ne4nrck6reyx2a0qzofovvpe6ul1iyn8i6q0nfkp&service=lso&o2v=1&flowName=GeneralOAuthFlow"
-                  className="px-4 py-2 bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-lg hover:bg-white/20 transition-all duration-200 hover:scale-105 flex items-center space-x-2"
-                >
-                  <Image
-                    src="/google.png"
-                    alt="Google"
-                    width={16}
-                    height={16}
-                    className="w-4 h-4"
-                  />
-                  <span>Google</span>
-                </a>
+                <SignUpButton mode="modal" afterSignUpUrl="/">
+                  <button className="px-4 py-2 bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-lg hover:bg-white/20 transition-all duration-200 hover:scale-105 flex items-center space-x-2">
+                    <Image
+                      src="/google.png"
+                      alt="Google"
+                      width={16}
+                      height={16}
+                      className="w-4 h-4"
+                    />
+                    <span>Google</span>
+                  </button>
+                </SignUpButton>
               </div>
             </SignedOut>
             
