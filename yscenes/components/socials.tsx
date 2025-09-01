@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import html2canvas from 'html2canvas';
+import { useShareModal } from '../hooks/useShareModal';
 
 interface Movie {
   title: string;
@@ -37,6 +38,17 @@ const SocialsButton = ({ movies = [], mood = "", username = "User" }: SocialsBut
   
   const dragRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Share modal hook
+  const { createLink, copyLink, openFromURLOnMount } = useShareModal(
+    movies,
+    mood,
+    username,
+    cardColor,
+    isModalOpen,
+    setIsModalOpen,
+    setReorderedMovies
+  );
 
   // Generate random vibrant color for the card
   const generateRandomColor = () => {
@@ -382,23 +394,113 @@ const SocialsButton = ({ movies = [], mood = "", username = "User" }: SocialsBut
                 </div>
               </div>
               {/* Footer with app branding */}
-              <div className="p-2 text-center mb-12">
+              <div className="p-2 text-center -mt-12">
                 <p className="text-gray-300 text-sm">Who else got something similar?</p>
                 <p className="text-white text-xs mt-1">Generate and share yours @Yscenes.com</p>
               </div>
             </div>
             
             {/* Continue Button - Positioned to the right of the modal */}
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log('Continue to Share clicked');
-                setIsDescriptionStep(true);
-              }}
-              className="absolute left-full ml-6 top-1/2 transform -translate-y-1/2 px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-100 transition-all duration-200 hover:scale-105 shadow-lg text-base whitespace-nowrap z-[60]"
-            >
-              Continue to Share →
-            </button>
+            <div className="absolute left-full ml-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-2 z-[60]">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const url = createLink();
+                  setIsDescriptionStep(true);
+                }}
+                className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-100 transition-all duration-200 hover:scale-105 shadow-lg text-base whitespace-nowrap"
+              >
+                Share now →
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const url = createLink();
+                  const success = await copyLink(url);
+                  if (success) {
+                    alert('Link copied!');
+                  }
+                }}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all duration-200 shadow-lg text-base whitespace-nowrap"
+              >
+                Copy link
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (!modalRef.current) return;
+                  
+                  try {
+                    // Hide close button and other UI elements that shouldn't be in the screenshot
+                    const closeButton = modalRef.current.querySelector('.close-button') as HTMLElement;
+                    if (closeButton) closeButton.style.display = 'none';
+                    
+                    // Sanitize CSS to remove unsupported color functions
+                    const originalStyles = new Map();
+                    const elements = modalRef.current.querySelectorAll('*');
+                    elements.forEach((el) => {
+                      const computedStyle = window.getComputedStyle(el);
+                      const properties = ['background-color', 'color', 'border-color'];
+                      
+                      properties.forEach(prop => {
+                        const value = computedStyle.getPropertyValue(prop);
+                        if (value && (value.includes('lab(') || value.includes('hsl(') || value.includes('rgb('))) {
+                          // Convert to hex or fallback to safe colors
+                          let safeColor = '#000000';
+                          if (value.includes('rgb(')) {
+                            // Keep rgb values as they're supported
+                            safeColor = value;
+                          } else if (value.includes('hsl(')) {
+                            // Convert hsl to hex (simplified)
+                            safeColor = '#ffffff';
+                          } else {
+                            // For lab() and other unsupported functions, use fallback
+                            safeColor = '#000000';
+                          }
+                          
+                          originalStyles.set(el, { element: el, property: prop, value: (el as HTMLElement).style[prop as any] });
+                          (el as HTMLElement).style[prop as any] = safeColor;
+                        }
+                      });
+                    });
+                    
+                    // Dynamically import html2canvas for client-side rendering
+                    const html2canvas = (await import('html2canvas')).default;
+                    const canvas = await html2canvas(modalRef.current, {
+                      useCORS: true,
+                      allowTaint: true,
+                      height: modalRef.current.offsetHeight,
+                      width: modalRef.current.offsetWidth,
+                      backgroundColor: '#000000',
+                    });
+                    
+                    // Restore original styles
+                    originalStyles.forEach(({ element, property, value }) => {
+                      (element as HTMLElement).style[property as any] = value;
+                    });
+                    
+                    // Restore close button
+                    if (closeButton) closeButton.style.display = '';
+                    
+                    // Create download link
+                    const link = document.createElement('a');
+                    link.download = 'yscenes-share.png';
+                    link.href = canvas.toDataURL('image/png');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    alert('Image downloaded successfully!');
+                  } catch (error) {
+                    console.error('Error capturing image:', error);
+                    alert('Failed to download image. Please try again.');
+                  }
+                }}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all duration-200 shadow-lg text-base whitespace-nowrap"
+              >
+                Save as 9:16 image
+              </button>
+            </div>
           </div>
         </div>
       )}
