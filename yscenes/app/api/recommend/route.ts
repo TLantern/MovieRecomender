@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { recommendationLogger } from '../../../utils/logger';
 
-const API_BASE = process.env.API_BASE_URL || "http://localhost:8000";
+const API_BASE = process.env.API_BASE_URL || "https://movierecomender.onrender.com";
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
