@@ -254,7 +254,7 @@ async function postToTwitter(content: string, image?: string): Promise<SocialMed
 
     // If image is provided, upload it first
     if (image) {
-      const mediaId = await uploadTwitterMedia(image, TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET);
+      const mediaId = await uploadTwitterMedia(image, TWITTER_API_KEY!, TWITTER_API_SECRET!, TWITTER_ACCESS_TOKEN!, TWITTER_ACCESS_TOKEN_SECRET!);
       if (mediaId) {
         mediaIds.push(mediaId);
       }
@@ -304,13 +304,13 @@ async function postToTwitter(content: string, image?: string): Promise<SocialMed
       const signatureBaseString = `POST&${encodeURIComponent('https://api.twitter.com/2/tweets')}&${encodeURIComponent(paramString)}`;
       
       // Create signing key
-      const signingKey = `${encodeURIComponent(TWITTER_API_SECRET)}&${encodeURIComponent(TWITTER_ACCESS_TOKEN_SECRET)}`;
+      const signingKey = `${encodeURIComponent(TWITTER_API_SECRET!)}&${encodeURIComponent(TWITTER_ACCESS_TOKEN_SECRET!)}`;
       
       // Create signature
       const oauth_signature = crypto.createHmac('sha1', signingKey).update(signatureBaseString).digest('base64');
       
       // Create authorization header
-      const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(TWITTER_API_KEY)}", oauth_nonce="${encodeURIComponent(oauth_nonce)}", oauth_signature="${encodeURIComponent(oauth_signature)}", oauth_signature_method="${encodeURIComponent(oauth_signature_method)}", oauth_timestamp="${encodeURIComponent(oauth_timestamp)}", oauth_token="${encodeURIComponent(TWITTER_ACCESS_TOKEN)}", oauth_version="${encodeURIComponent(oauth_version)}"`;
+      const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(TWITTER_API_KEY!)}", oauth_nonce="${encodeURIComponent(oauth_nonce)}", oauth_signature="${encodeURIComponent(oauth_signature)}", oauth_signature_method="${encodeURIComponent(oauth_signature_method)}", oauth_timestamp="${encodeURIComponent(oauth_timestamp)}", oauth_token="${encodeURIComponent(TWITTER_ACCESS_TOKEN!)}", oauth_version="${encodeURIComponent(oauth_version)}"`;
       
       const tweetData: any = { text: truncatedContent };
       if (mediaIds.length > 0) {

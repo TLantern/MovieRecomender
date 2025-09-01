@@ -471,7 +471,7 @@ const SocialsButton = ({ movies = [], mood = "", username = "User" }: SocialsBut
                       allowTaint: true,
                       height: modalRef.current.offsetHeight,
                       width: modalRef.current.offsetWidth,
-                      backgroundColor: '#000000',
+                      background: '#000000',
                     });
                     
                     // Restore original styles

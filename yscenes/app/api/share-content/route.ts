@@ -131,85 +131,9 @@ async function generateTikTokShare(content: string, image?: string): Promise<Sha
 
 async function generateShareableImage(content: string, platform: string): Promise<string> {
   try {
-    const { createCanvas } = require('canvas');
-    
-    let width = 1200;
-    let height = 630;
-    
-    if (platform === 'instagram') {
-      width = 1080;
-      height = 1080;
-    } else if (platform === 'tiktok') {
-      width = 1080;
-      height = 1920;
-    }
-    
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-    
-    // Background
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, width, height);
-    
-    // Gradient
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, '#667eea');
-    gradient.addColorStop(1, '#764ba2');
-    ctx.fillStyle = gradient;
-    ctx.globalAlpha = 0.3;
-    ctx.fillRect(0, 0, width, height);
-    ctx.globalAlpha = 1;
-    
-    // Brand
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Yscenes', width / 2, 80);
-    
-    // Content
-    ctx.font = '24px Arial';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    
-    const words = content.split(' ');
-    let line = '';
-    let y = 150;
-    
-    for (const word of words) {
-      const testLine = line + word + ' ';
-      const metrics = ctx.measureText(testLine);
-      
-      if (metrics.width > width - 100 && line !== '') {
-        ctx.fillText(line, 50, y);
-        line = word + ' ';
-        y += 35;
-      } else {
-        line = testLine;
-      }
-    }
-    ctx.fillText(line, 50, y);
-    
-    // Platform
-    ctx.font = 'bold 32px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Share on ${platform.charAt(0).toUpperCase() + platform.slice(1)}`, width / 2, height - 50);
-    
-    const buffer = canvas.toBuffer('image/png');
-    const fs = require('fs');
-    const path = require('path');
-    
-    const publicDir = path.join(process.cwd(), 'public', 'shares');
-    if (!fs.existsSync(publicDir)) {
-      fs.mkdirSync(publicDir, { recursive: true });
-    }
-    
-    const filename = `share-${platform}-${Date.now()}.png`;
-    const filepath = path.join(publicDir, filename);
-    
-    fs.writeFileSync(filepath, buffer);
-    
-    return `/shares/${filename}`;
-    
+    // Canvas package not available in this environment
+    // Return a placeholder or throw an error
+    throw new Error('Image generation not available in this environment');
   } catch (error) {
     console.error('Error generating shareable image:', error);
     throw new Error('Failed to generate shareable image');
