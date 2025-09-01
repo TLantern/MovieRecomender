@@ -77,7 +77,7 @@ export default function Navbar() {
                 </SignUpButton>
                 
                 {/* Google Sign In Button */}
-                <SignUpButton mode="modal" afterSignUpUrl="/">
+                <SignUpButton mode="modal" fallbackRedirectUrl="/">
                   <button className="px-4 py-2 bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-lg hover:bg-white/20 transition-all duration-200 hover:scale-105 flex items-center space-x-2">
                     <Image
                       src="/google.png"
