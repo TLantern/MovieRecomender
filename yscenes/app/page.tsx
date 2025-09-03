@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 // import Carousel from '../components/carousel';
 import Navbar from '../components/navbar';
 import SearchBar from '../components/search-bar';
-import ActorCarousel from '../components/actor-carousel';
 import Bookmark from '../components/bookmark';
 import MovieModal from '../components/movie-modal';
 import { useSessionMemory } from '../hooks/useSessionMemory';
@@ -104,10 +103,6 @@ export default function Home() {
     } finally {
       setSearchLoading(false);
     }
-  };
-
-  const handleActorClick = (actorName: string) => {
-    setSelectedActor(actorName);
   };
 
   const handleMoreRecommendations = async () => {
@@ -292,7 +287,7 @@ export default function Home() {
           {/* Actor Carousel */}
           {!showResults && (
             <div className="mt-8">
-              <ActorCarousel onActorClick={handleActorClick} />
+              {/* The ActorCarousel component is now integrated into SearchBar */}
             </div>
           )}
           

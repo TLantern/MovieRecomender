@@ -28,6 +28,27 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
   const [typingIndex, setTypingIndex] = useState(0);
   const [showEnterPrompt, setShowEnterPrompt] = useState(false);
   
+  // Actor carousel rotation states
+  const [carouselPosition, setCarouselPosition] = useState(0);
+  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Auto-rotate carousel
+  useEffect(() => {
+    if (isCarouselPaused) return;
+    
+    const interval = setInterval(() => {
+      setCarouselPosition(prev => {
+        // Calculate total width and move carousel
+        const totalWidth = 16 * 120; // 16 actors * ~120px each
+        const moveAmount = 2; // Move 2px each tick
+        return (prev + moveAmount) % totalWidth;
+      });
+    }, 50); // Update every 50ms for smooth movement
+    
+    return () => clearInterval(interval);
+  }, [isCarouselPaused]);
+  
   const moodSuggestions = [
     "Need something scary but still heartwarming",
     "Feeling nostalgic for the 90s",
@@ -299,6 +320,59 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
           <h2 className="text-sm font-light text-gray-300 whitespace-nowrap min-w-[50px] text-center font-body">
             {yearRange[1]}
           </h2>
+        </div>
+      </div>
+
+      {/* Compact Actor Carousel */}
+      <div className="w-full mt-4">
+        <div 
+          className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-2 transition-transform duration-100 ease-linear"
+          style={{ transform: `translateX(-${carouselPosition}px)` }}
+        >
+          {[
+            'Leonardo DiCaprio', 'Dwayne Johnson', 'Zendaya', 'Timothée Chalamet', 
+            'Jennifer Lawrence', 'Ryan Gosling', 'Margot Robbie', 'Cillian Murphy',
+            'Tom Holland', 'Florence Pugh', 'Robert Downey Jr.', 'Chris Hemsworth',
+            'Emma Stone', 'Ryan Reynolds', 'Scarlett Johansson', 'Tom Hardy'
+          ].map((actor, index) => (
+            <button
+              key={actor}
+              onClick={() => onSearch(mood, yearRange, actor)}
+              onMouseEnter={() => {
+                // Pause carousel after a short delay
+                const timeout = setTimeout(() => {
+                  setIsCarouselPaused(true);
+                }, 500);
+                setHoverTimeout(timeout);
+              }}
+              onMouseLeave={() => {
+                // Resume carousel immediately on leave
+                if (hoverTimeout) {
+                  clearTimeout(hoverTimeout);
+                  setHoverTimeout(null);
+                }
+                setIsCarouselPaused(false);
+              }}
+              className={`relative px-4 py-2 text-xs rounded-full whitespace-nowrap transition-all duration-300 overflow-hidden group flex-shrink-0 ${
+                selectedActor === actor
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                  : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white border border-white/20'
+              }`}
+            >
+              {/* Hover gradient overlay */}
+              <div className={`absolute inset-0 bg-gradient-to-b from-white/20 via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                selectedActor === actor ? 'hidden' : ''
+              }`} />
+              
+              {/* Red glow at bottom on hover */}
+              <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 via-red-500 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ${
+                selectedActor === actor ? 'hidden' : ''
+              }`} />
+              
+              {/* Button text */}
+              <span className="relative z-10">{actor}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

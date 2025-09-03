@@ -228,33 +228,17 @@
 }
 
 /* Clerk UserButton Avatar Size Override */
-.cl-userButtonAvatarBox {
+.cl-userButtonBox .cl-userButtonTrigger {
   width: 48px !important;
   height: 48px !important;
-  min-width: 48px !important;
-  min-height: 48px !important;
 }
 
-.cl-userButtonAvatarImage {
-  width: 48px !important;
-  height: 48px !important;
-  min-width: 48px !important;
-  min-height: 48px !important;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3)) !important;
+/* Hide scrollbar for actor buttons */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
 }
 
-/* Force override any inline styles */
-.cl-userButtonAvatarBox[style] {
-  width: 48px !important;
-  height: 48px !important;
-  min-width: 48px !important;
-  min-height: 48px !important;
-}
-
-.cl-userButtonAvatarImage[style] {
-  width: 48px !important;
-  height: 48px !important;
-  min-width: 48px !important;
-  min-height: 48px !important;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3)) !important;
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
 }
