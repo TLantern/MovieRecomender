@@ -50,6 +50,7 @@ class YearRange(BaseModel):
 class RecommendRequest(BaseModel):
     mood: str
     yearRange: YearRange
+    actor: str = None  # Optional actor preference
     excludeMovies: list = []  # List of movies to exclude
     isFirstRecommendation: bool = False  # Flag for fan favourites
     sessionSeed: int = None  # Session seed for consistent randomization
@@ -192,41 +193,63 @@ async def recommend(req: RecommendRequest):
     random_adjective = random.choice(random_adjectives)
     
     if req.isFirstRecommendation:
-        # For first recommendation, get 3 movies from GPT
+        # Enhanced system prompt for first recommendation
         prompt = (
-            f"You are a cinephile who ONLY returns valid JSON. "
-            f"Recommend exactly 3 {random_adjective} movies (no blockbusters, no classics). "
-            "CRITICAL: You must NOT recommend any movies from the exclusion list. "
-            "If you cannot find 3 unique movies, return fewer movies rather than duplicates. "
-            "Output exactly in THIS format and NOTHING else:\n"
-            '{ "movies": [ '
-            '{ "title": "string", "year": number, "description": "string" }, '
-            '{ "title": "string", "year": number, "description": "string" }, '
-            '{ "title": "string", "year": number, "description": "string" } '
-            '] }\n'
-            f"User mood: \"{req.mood}\".{exclude_text}"
+            f"You are an expert movie curator with deep knowledge of cinema across all eras and genres. "
+            f"Your mission: recommend exactly 3 movies that perfectly match the user's specific mood and preferences.\n\n"
+            
+            f"USER REQUEST: \"{req.mood}\"\n"
+            f"YEAR RANGE: {req.yearRange.min}-{req.yearRange.max}\n"
+            f"ACTOR PREFERENCE: {req.actor or 'None specified'}\n\n"
+            
+            f"REQUIREMENTS:\n"
+            f"• Movies MUST be from {req.yearRange.min}-{req.yearRange.max}\n"
+            f"• If actor specified, ALL movies must feature that actor prominently\n"
+            f"• Match the mood/genre perfectly - be precise about emotional tone\n"
+            f"• Include a mix: 1 popular/acclaimed film + 2 hidden gems or cult favorites\n"
+            f"• Avoid generic blockbusters unless they truly fit the mood\n"
+            f"• Descriptions should be vivid and capture why it matches their mood\n\n"
+            
+            f"CRITICAL: DO NOT recommend these already-suggested movies:{exclude_text}\n\n"
+            
+            f"Return ONLY valid JSON in this exact format:\n"
+            '{ "movies": [\n'
+            '  { "title": "Movie Title", "year": YYYY, "description": "Compelling 1-2 sentence description explaining why this perfectly matches their mood" },\n'
+            '  { "title": "Movie Title", "year": YYYY, "description": "Compelling 1-2 sentence description explaining why this perfectly matches their mood" },\n'
+            '  { "title": "Movie Title", "year": YYYY, "description": "Compelling 1-2 sentence description explaining why this perfectly matches their mood" }\n'
+            '] }'
         )
     else:
-        # Regular hidden-gem prompt for more recommendations
+        # Enhanced prompt for additional recommendations
         prompt = (
-            f"You are a cinephile who ONLY returns valid JSON. "
-            f"Recommend exactly 3 {random_adjective} movies (no blockbusters, no classics). "
-            "CRITICAL: You must NOT recommend any movies from the exclusion list. "
-            "If you cannot find 3 unique movies, return fewer movies rather than duplicates. "
-            "Output exactly in THIS format and NOTHING else:\n"
-            '{ "movies": [ '
-            '{ "title": "string", "year": number, "description": "string" }, '
-            '{ "title": "string", "year": number, "description": "string" }, '
-            '{ "title": "string", "year": number, "description": "string" } '
-            '] }\n'
-            f"User mood: \"{req.mood}\".{exclude_text}"
+            f"You are a cinema expert specializing in discovering {random_adjective} films. "
+            f"The user wants MORE movies that match their mood, so focus on deeper cuts and hidden gems.\n\n"
+            
+            f"USER REQUEST: \"{req.mood}\"\n"
+            f"YEAR RANGE: {req.yearRange.min}-{req.yearRange.max}\n"
+            f"ACTOR PREFERENCE: {req.actor or 'None specified'}\n\n"
+            
+            f"REQUIREMENTS:\n"
+            f"• Movies MUST be from {req.yearRange.min}-{req.yearRange.max}\n"
+            f"• If actor specified, ALL movies must feature that actor\n"
+            f"• Focus on lesser-known films, international cinema, or cult classics\n"
+            f"• Avoid mainstream hits - they want discoveries\n"
+            f"• Each description should highlight what makes it special\n\n"
+            
+            f"CRITICAL: DO NOT recommend these already-suggested movies:{exclude_text}\n\n"
+            
+            f"Return ONLY valid JSON in this exact format:\n"
+            '{ "movies": [\n'
+            '  { "title": "Movie Title", "year": YYYY, "description": "Why this hidden gem perfectly captures their mood" },\n'
+            '  { "title": "Movie Title", "year": YYYY, "description": "Why this hidden gem perfectly captures their mood" },\n'
+            '  { "title": "Movie Title", "year": YYYY, "description": "Why this hidden gem perfectly captures their mood" }\n'
+            '] }'
         )
 
     resp = ChatCompletion.create(
-        model="gpt-4o-mini",
+        model="gpt-5-nano",
         messages=[{"role": "user", "content": prompt}],
-        top_p=0.7,      # More diverse token selection
-        temperature=0.9,  # Higher temperature for more variety
+        # GPT-5 Nano uses default temperature (1) only
     )
     content = resp.choices[0].message.content
 

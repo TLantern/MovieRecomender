@@ -22,20 +22,22 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 500,
-        temperature: 0.8,
+        max_completion_tokens: 500,
+        temperature: 1
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorData = await response.text();
+      console.error('OpenAI API error details:', errorData);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
     }
 
     const data = await response.json();

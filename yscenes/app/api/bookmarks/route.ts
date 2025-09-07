@@ -15,8 +15,11 @@ export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('No userId found in auth()');
+      return NextResponse.json({ error: 'Please sign in to bookmark movies' }, { status: 401 });
     }
+
+    console.log('User authenticated:', userId);
 
     const body: BookmarkData = await request.json();
     if (!body.movieId || !body.title || !body.year) {
@@ -24,6 +27,12 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServerSupabaseClient();
+    
+    // Verify Supabase connection
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+    }
 
     // Check if bookmark already exists
     const { data: existingBookmark, error: checkError } = await supabase
@@ -89,10 +98,19 @@ export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('No userId found in GET bookmarks auth()');
+      return NextResponse.json({ error: 'Please sign in to view bookmarks' }, { status: 401 });
     }
 
+    console.log('User authenticated for GET bookmarks:', userId);
+
     const supabase = createServerSupabaseClient();
+    
+    // Verify Supabase connection
+    if (!supabase) {
+      console.error('Failed to create Supabase client for GET bookmarks');
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+    }
 
     // Fetch user's bookmarks from Supabase
     const { data: bookmarks, error } = await supabase

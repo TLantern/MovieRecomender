@@ -70,14 +70,14 @@ export default function Navbar() {
             <SignedOut>
               <div className="flex items-center space-x-3">
                 {/* Sign Up Button */}
-                <SignUpButton mode="modal">
+                <SignUpButton mode="modal" fallbackRedirectUrl="/upgrade">
                   <button className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-100 transition-all duration-200 hover:scale-105 font-medium">
                     Sign Up
                   </button>
                 </SignUpButton>
                 
                 {/* Google Sign In Button */}
-                <SignUpButton mode="modal" fallbackRedirectUrl="/">
+                <SignUpButton mode="modal" fallbackRedirectUrl="/upgrade">
                   <button className="px-4 py-2 bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-lg hover:bg-white/20 transition-all duration-200 hover:scale-105 flex items-center space-x-2">
                     <Image
                       src="/google.png"

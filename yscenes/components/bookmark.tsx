@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useUser, SignUpButton } from '@clerk/nextjs';
 
 interface BookmarkProps {
   movieId: string;
@@ -23,8 +24,10 @@ const Bookmark: React.FC<BookmarkProps> = ({
   isBookmarked = false, 
   onToggle 
 }) => {
+  const { user, isSignedIn } = useUser();
   const [isChecked, setIsChecked] = useState(isBookmarked);
   const [isLoading, setIsLoading] = useState(false);
+  const signUpButtonRef = useRef<HTMLButtonElement>(null);
 
   // Update internal state when prop changes
   useEffect(() => {
@@ -33,6 +36,23 @@ const Bookmark: React.FC<BookmarkProps> = ({
 
   const handleToggle = async () => {
     if (isLoading) return;
+    
+    // Check if user is signed in
+    if (!isSignedIn) {
+      // Trigger the signup modal for non-signed in users
+      signUpButtonRef.current?.click();
+      return;
+    }
+    
+    // TODO: Check if user has pro subscription here
+    // For now, redirect all signed-in users to upgrade page
+    const hasProSubscription = false; // Replace with actual subscription check
+    
+    if (!hasProSubscription) {
+      // Redirect signed-in users without pro to upgrade page
+      window.location.href = '/upgrade';
+      return;
+    }
     
     setIsLoading(true);
     try {
@@ -60,7 +80,16 @@ const Bookmark: React.FC<BookmarkProps> = ({
           onToggle(movieId, newState);
         }
       } else {
-        console.error('Failed to toggle bookmark');
+        const errorData = await response.text();
+        console.error('Failed to toggle bookmark:', response.status, errorData);
+        
+        if (response.status === 401) {
+          // Redirect to upgrade page for authentication errors (user is signed in but not pro)
+          window.location.href = '/upgrade';
+        } else {
+          alert('Failed to bookmark movie. Please try again.');
+        }
+        throw new Error(`Failed to toggle bookmark: ${response.status} ${errorData}`);
       }
     } catch (error) {
       console.error('Error toggling bookmark:', error);
@@ -70,26 +99,36 @@ const Bookmark: React.FC<BookmarkProps> = ({
   };
 
   return (
-    <label className="ui-bookmark cursor-pointer">
-      <input 
-        type="checkbox" 
-        checked={isChecked}
-        onChange={() => {}} 
-        className="hidden"
-      />
-      <div 
-        className="bookmark transition-all duration-600"
-        onClick={handleToggle}
-        style={{
-          fill: isChecked ? 'rgb(250, 204, 21)' : 'rgb(156, 163, 175)'
-        }}
-      >
-        <svg viewBox="0 0 32 32" className="w-6 h-6">
-          <g>
-            <path d="M27 4v27a1 1 0 0 1-1.625.781L16 24.281l-9.375 7.5A1 1 0 0 1 5 31V4a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4z" />
-          </g>
-        </svg>
-      </div>
+    <>
+      {/* Hidden SignUp button to trigger modal */}
+      <SignUpButton mode="modal" fallbackRedirectUrl="/upgrade">
+        <button 
+          ref={signUpButtonRef}
+          className="hidden"
+          aria-hidden="true"
+        />
+      </SignUpButton>
+      
+      <label className="ui-bookmark cursor-pointer">
+        <input 
+          type="checkbox" 
+          checked={isChecked}
+          onChange={() => {}} 
+          className="hidden"
+        />
+        <div 
+          className="bookmark transition-all duration-600"
+          onClick={handleToggle}
+          style={{
+            fill: isChecked ? 'rgb(250, 204, 21)' : 'rgb(156, 163, 175)'
+          }}
+        >
+          <svg viewBox="0 0 32 32" className="w-6 h-6">
+            <g>
+              <path d="M27 4v27a1 1 0 0 1-1.625.781L16 24.281l-9.375 7.5A1 1 0 0 1 5 31V4a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4z" />
+            </g>
+          </svg>
+        </div>
       
       <style jsx>{`
         .ui-bookmark {
@@ -194,7 +233,8 @@ const Bookmark: React.FC<BookmarkProps> = ({
           }
         }
       `}</style>
-    </label>
+      </label>
+    </>
   );
 };
 

@@ -11,6 +11,71 @@ import SocialsButton from '../components/socials';
 import Footer from '../components/footer';
 // import { useMovies } from '../hooks/useMovies';
 
+// Typewriter Loading Component
+const TypewriterLoading = () => {
+  const [currentText, setCurrentText] = useState('');
+  const [currentSayingIndex, setCurrentSayingIndex] = useState(0);
+  const [isTyping, setIsTyping] = useState(true);
+  
+  const loadingSayings = [
+    "Spinning the popcorn machine",
+    "Negotiating with the movie gods",
+    "Untangling film reels from the 90s",
+    "Teaching AI how to cry at sad scenes",
+    "Auditioning movies for you",
+    "Feeding the projector gremlins",
+    "Arguing with critics in the basement",
+    "Testing if rom-coms still exist",
+    "Unlocking the director's cut",
+    "Rewinding VHS tapes at light speed",
+    "Casting the right vibe",
+    "Spilling popcorn everywhere",
+    "Running background checks on villains",
+    "Checking if aliens like chick flicks",
+    "Subtitling in Martian language",
+    "Loading emotional baggage",
+    "Balancing explosions and kisses",
+    "Hacking into Netflix's secret vault",
+    "Shuffling Oscar speeches",
+    "Asking your inner critic politely to shut up"
+  ];
+
+  useEffect(() => {
+    const currentSaying = loadingSayings[currentSayingIndex];
+    
+    if (isTyping && currentText.length < currentSaying.length) {
+      // Typing effect
+      const timeout = setTimeout(() => {
+        setCurrentText(currentSaying.slice(0, currentText.length + 1));
+      }, 80); // Slower typewriter speed
+      return () => clearTimeout(timeout);
+    } else if (isTyping && currentText.length === currentSaying.length) {
+      // Pause for 2 seconds after fully typed
+      const timeout = setTimeout(() => {
+        setIsTyping(false);
+      }, 2000);
+      return () => clearTimeout(timeout);
+    } else if (!isTyping && currentText.length > 0) {
+      // Untyping effect (backspace)
+      const timeout = setTimeout(() => {
+        setCurrentText(currentText.slice(0, -1));
+      }, 30); // Faster untyping
+      return () => clearTimeout(timeout);
+    } else if (!isTyping && currentText.length === 0) {
+      // Move to next saying
+      setCurrentSayingIndex((prev) => (prev + 1) % loadingSayings.length);
+      setIsTyping(true);
+    }
+  }, [currentText, currentSayingIndex, isTyping, loadingSayings]);
+
+  return (
+    <p className="text-white text-lg font-body font-bold drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] min-h-[1.5rem]">
+      {currentText}
+      <span className="animate-pulse">|</span>
+    </p>
+  );
+};
+
 interface MovieResult {
   title: string;
   year: number;
@@ -194,13 +259,13 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-16">
       <Navbar />
       <main className="pt-0">
         <div className="container mx-auto">
-          <div className="flex flex-row gap-6 justify-center items-start max-w-6xl mx-auto pt-8">
+          <div className="flex flex-col lg:flex-row gap-6 justify-center items-start max-w-6xl mx-auto pt-8 px-4">
             {/* Main Search Bar */}
-            <div className="bg-black/70 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/30 relative flex-1 max-w-2xl drop-shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+            <div className="bg-black/70 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/30 relative flex-1 max-w-2xl w-full drop-shadow-[0_0_30px_rgba(59,130,246,0.2)]">
               <div className="absolute inset-0 bg-white/3 rounded-xl blur-xl"></div>
               {/* This div sets up a relatively positioned container with a high z-index (z-25) to ensure its children (like the SearchBar) appear above background effects or overlays. */}
               <div className="relative z-35">
@@ -325,7 +390,7 @@ export default function Home() {
             {searchLoading ? (
               <div className="text-center py-8">
                 {/* From Uiverse.io by Donewenfu */}
-                <p className="text-white text-lg font-body font-bold drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">Finding your Perfect Movie</p>
+                <TypewriterLoading />
                 <div className="loader mt-4">
                   <div className="jimu-primary-loading"></div>
                 </div>

@@ -3,14 +3,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { Slider } from './ui/slider';
 import Image from 'next/image';
+import AILoader from './ai-loader';
+import { useUser, SignUpButton } from '@clerk/nextjs';
 
 interface SearchBarProps {
   onSearch: (mood: string, yearRange: [number, number], selectedActor?: string) => void;
   loading?: boolean;
   selectedActor?: string;
+  onActorSelect?: (actor: string) => void;
 }
 
-export default function SearchBar({ onSearch, loading = false, selectedActor }: SearchBarProps) {
+export default function SearchBar({ onSearch, loading = false, selectedActor, onActorSelect }: SearchBarProps) {
+  const { user, isSignedIn } = useUser();
+  const signUpButtonRef = useRef<HTMLButtonElement>(null);
+  const [localSelectedActor, setLocalSelectedActor] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [mood, setMood] = useState('');
   const [yearRange, setYearRange] = useState<[number, number]>([1970, 2025]);
@@ -35,19 +41,22 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
   
   // Auto-rotate carousel
   useEffect(() => {
-    if (isCarouselPaused) return;
+    // Stop carousel permanently if an actor is selected
+    if (isCarouselPaused || localSelectedActor) return;
     
     const interval = setInterval(() => {
       setCarouselPosition(prev => {
         // Calculate total width and move carousel
         const totalWidth = 16 * 120; // 16 actors * ~120px each
         const moveAmount = 2; // Move 2px each tick
-        return (prev + moveAmount) % totalWidth;
+        // Reset position when reaching the end to create seamless loop
+        const newPosition = prev + moveAmount;
+        return newPosition >= totalWidth ? 0 : newPosition;
       });
     }, 50); // Update every 50ms for smooth movement
     
     return () => clearInterval(interval);
-  }, [isCarouselPaused]);
+  }, [isCarouselPaused, localSelectedActor]);
   
   const moodSuggestions = [
     "Need something scary but still heartwarming",
@@ -144,7 +153,7 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
       setIsDeleting(false);
       setPlaceholderIndex((placeholderIndex + 1) % moodSuggestions.length);
     }
-  }, [charIndex, isDeleting, placeholderIndex, moodSuggestions, mood]);
+  }, [charIndex, isDeleting, placeholderIndex]);
 
   // Typing animation for AI suggestions
   useEffect(() => {
@@ -177,7 +186,7 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
       alert("Tell us your mood first!");
       return;
     }
-    onSearch(mood.trim(), yearRange, selectedActor);
+    onSearch(mood.trim(), yearRange, localSelectedActor || selectedActor);
   };
 
   const handleBottomEmailSubmit = async () => {
@@ -230,10 +239,71 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
     setIsTypingSuggestion(true);
   };
 
+  const handleYearRangeChange = (value: [number, number]) => {
+    // Update visual state during sliding - no redirect here
+    setYearRange(value);
+  };
+
+  const handleYearRangeCommit = (value: [number, number]) => {
+    if (!isSignedIn) {
+      // Trigger signup modal for non-signed in users
+      signUpButtonRef.current?.click();
+      return;
+    }
+    
+    // TODO: Check if user has pro subscription here
+    // For now, redirect all signed-in users to upgrade page
+    const hasProSubscription = false; // Replace with actual subscription check
+    
+    if (!hasProSubscription) {
+      // Redirect signed-in users without pro to upgrade page
+      window.location.href = '/upgrade';
+      return;
+    }
+  };
+
+  const handleActorSelection = (actor: string) => {
+    if (!isSignedIn) {
+      // Trigger signup modal for non-signed in users
+      signUpButtonRef.current?.click();
+      return;
+    }
+    
+    // TODO: Check if user has pro subscription here
+    // For now, redirect all signed-in users to upgrade page
+    const hasProSubscription = false; // Replace with actual subscription check
+    
+    if (!hasProSubscription) {
+      // Redirect signed-in users without pro to upgrade page
+      window.location.href = '/upgrade';
+      return;
+    }
+    
+    // Toggle actor selection
+    const newActor = localSelectedActor === actor ? '' : actor;
+    setLocalSelectedActor(newActor);
+    
+    // Carousel will stop spinning when actor is selected, resume when deselected
+    
+    if (onActorSelect) {
+      onActorSelect(newActor);
+    }
+  };
+
   return (
-    <div className="text-center mt-8 relative">
-      {/* Mood Input */}
-      <div className="flex justify-center mb-4">
+    <>
+      {/* Hidden SignUp button to trigger modal for premium features */}
+      <SignUpButton mode="modal" fallbackRedirectUrl="/upgrade">
+        <button 
+          ref={signUpButtonRef}
+          className="hidden"
+          aria-hidden="true"
+        />
+      </SignUpButton>
+      
+      <div className="text-center mt-8 relative">
+        {/* Mood Input */}
+        <div className="flex justify-center mb-4">
         <div className="relative">
           {/* Selected Actor Tag */}
           {selectedActor && (
@@ -266,25 +336,9 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
               Press Enter to continue
             </div>
           )}
-          {/* Aimagic Logo */}
-          <div 
-            className="absolute top-2 left-2 cursor-pointer z-10"
-            onClick={handleLogoClick}
-          >
-            <div className="relative group">
-              {/* Glow effect behind the logo */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/30 to-purple-400/30 rounded-full blur-md opacity-70 group-hover:opacity-100 transition-opacity duration-300"></div>
-              {/* Logo */}
-              <div className="relative transform transition-transform duration-300 group-hover:scale-125">
-                <Image
-                  src="/Aimagic.png"
-                  alt="Aimagic Logo"
-                  width={32}
-                  height={32}
-                  className="rounded-sm"
-                />
-              </div>
-            </div>
+          {/* AI Loader */}
+          <div className="absolute top-2 left-2 z-10">
+            <AILoader onClick={handleLogoClick} />
           </div>
         </div>
       </div>
@@ -311,7 +365,8 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
           </h2>
           <Slider
             value={yearRange}
-            onValueChange={(value) => setYearRange(value as [number, number])}
+            onValueChange={(value) => handleYearRangeChange(value as [number, number])}
+            onValueCommit={(value) => handleYearRangeCommit(value as [number, number])}
             max={2025}
             min={1970}
             step={1}
@@ -324,57 +379,106 @@ export default function SearchBar({ onSearch, loading = false, selectedActor }: 
       </div>
 
       {/* Compact Actor Carousel */}
-      <div className="w-full mt-4">
+      <div className="w-full mt-4 pt-4 pb-2 overflow-hidden">
         <div 
-          className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-2 transition-transform duration-100 ease-linear"
+          className="flex gap-2 pb-2 scrollbar-hide px-2 transition-transform duration-100 ease-linear"
           style={{ transform: `translateX(-${carouselPosition}px)` }}
         >
           {[
             'Leonardo DiCaprio', 'Dwayne Johnson', 'Zendaya', 'Timothée Chalamet', 
             'Jennifer Lawrence', 'Ryan Gosling', 'Margot Robbie', 'Cillian Murphy',
             'Tom Holland', 'Florence Pugh', 'Robert Downey Jr.', 'Chris Hemsworth',
+            'Emma Stone', 'Ryan Reynolds', 'Scarlett Johansson', 'Tom Hardy',
+            // Duplicate for seamless loop
+            'Leonardo DiCaprio', 'Dwayne Johnson', 'Zendaya', 'Timothée Chalamet', 
+            'Jennifer Lawrence', 'Ryan Gosling', 'Margot Robbie', 'Cillian Murphy',
+            'Tom Holland', 'Florence Pugh', 'Robert Downey Jr.', 'Chris Hemsworth',
             'Emma Stone', 'Ryan Reynolds', 'Scarlett Johansson', 'Tom Hardy'
-          ].map((actor, index) => (
+          ].map((actor, index) => {
+            // Define colors for selected state
+            const selectedColors = [
+              'bg-blue-100 text-blue-900',    // Pale blue
+              'bg-purple-100 text-purple-900', // Pale purple
+              'bg-pink-100 text-pink-900',     // Pale pink
+              'bg-green-100 text-green-900',   // Pale green
+              'bg-orange-100 text-orange-900'  // Pale orange
+            ];
+            const colorIndex = index % selectedColors.length;
+            const selectedClass = `${selectedColors[colorIndex]} font-medium`;
+            
+            return (
             <button
-              key={actor}
-              onClick={() => onSearch(mood, yearRange, actor)}
-              onMouseEnter={() => {
-                // Pause carousel after a short delay
-                const timeout = setTimeout(() => {
-                  setIsCarouselPaused(true);
-                }, 500);
-                setHoverTimeout(timeout);
+              key={`${actor}-${index}`}
+              onClick={() => handleActorSelection(actor)}
+              className={`relative px-4 py-2 text-xs rounded-full whitespace-nowrap transition-all duration-300 flex-shrink-0 group ${
+                (localSelectedActor === actor || selectedActor === actor)
+                  ? selectedClass
+                  : 'bg-white text-black hover:bg-gray-100'
+              }`}
+              style={{
+                filter: 'drop-shadow(0 0 0 transparent)',
+                transition: 'filter 0.3s ease-in-out, transform 0.2s ease-in-out'
               }}
-              onMouseLeave={() => {
-                // Resume carousel immediately on leave
+              onMouseEnter={(e) => {
+                // Stop carousel immediately on hover
+                setIsCarouselPaused(true);
                 if (hoverTimeout) {
                   clearTimeout(hoverTimeout);
                   setHoverTimeout(null);
                 }
-                setIsCarouselPaused(false);
+                // Add very subtle colored glow - rotate between 5 colors
+                const colors = [
+                  'rgba(59, 130, 246, 0.25)',   // Blue
+                  'rgba(147, 51, 234, 0.25)',   // Purple
+                  'rgba(236, 72, 153, 0.25)',   // Pink
+                  'rgba(34, 197, 94, 0.25)',    // Green
+                  'rgba(251, 146, 60, 0.25)'    // Orange
+                ];
+                const colorIndex = index % colors.length;
+                e.currentTarget.style.filter = `drop-shadow(0 1px 6px ${colors[colorIndex]}) drop-shadow(0 0 8px ${colors[colorIndex]})`;
+                e.currentTarget.style.transform = 'scale(1.05)';
               }}
-              className={`relative px-4 py-2 text-xs rounded-full whitespace-nowrap transition-all duration-300 overflow-hidden group flex-shrink-0 ${
-                selectedActor === actor
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                  : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white border border-white/20'
-              }`}
+              onMouseLeave={(e) => {
+                // Resume carousel immediately on leave
+                setIsCarouselPaused(false);
+                // Remove colored glow and reset transform
+                e.currentTarget.style.filter = 'drop-shadow(0 0 0 transparent)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              onMouseDown={(e) => {
+                // Add intense glow effect on click/press
+                const colors = [
+                  'rgba(59, 130, 246, 1)',     // Bright Blue
+                  'rgba(147, 51, 234, 1)',     // Bright Purple
+                  'rgba(236, 72, 153, 1)',     // Bright Pink
+                  'rgba(34, 197, 94, 1)',      // Bright Green
+                  'rgba(251, 146, 60, 1)'      // Bright Orange
+                ];
+                const colorIndex = index % colors.length;
+                e.currentTarget.style.filter = `drop-shadow(0 6px 24px ${colors[colorIndex]}) drop-shadow(0 0 32px ${colors[colorIndex]}) drop-shadow(0 0 8px ${colors[colorIndex]})`;
+                e.currentTarget.style.transform = 'scale(0.95)';
+              }}
+              onMouseUp={(e) => {
+                // Return to very subtle hover state after click
+                const colors = [
+                  'rgba(59, 130, 246, 0.25)',   // Blue
+                  'rgba(147, 51, 234, 0.25)',   // Purple
+                  'rgba(236, 72, 153, 0.25)',   // Pink
+                  'rgba(34, 197, 94, 0.25)',    // Green
+                  'rgba(251, 146, 60, 0.25)'    // Orange
+                ];
+                const colorIndex = index % colors.length;
+                e.currentTarget.style.filter = `drop-shadow(0 1px 6px ${colors[colorIndex]}) drop-shadow(0 0 8px ${colors[colorIndex]})`;
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
             >
-              {/* Hover gradient overlay */}
-              <div className={`absolute inset-0 bg-gradient-to-b from-white/20 via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                selectedActor === actor ? 'hidden' : ''
-              }`} />
-              
-              {/* Red glow at bottom on hover */}
-              <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 via-red-500 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ${
-                selectedActor === actor ? 'hidden' : ''
-              }`} />
-              
-              {/* Button text */}
-              <span className="relative z-10">{actor}</span>
+              {actor}
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
