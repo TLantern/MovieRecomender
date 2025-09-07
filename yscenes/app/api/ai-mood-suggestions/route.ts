@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { examples } = await request.json();
-    
     // Check if OpenAI API key is available
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
@@ -13,7 +11,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `Generate a list of unique movie-watching moods. Each mood should be short (1 sentence or phrase), emotionally evocative, and specific enough to guide a recommendation engine. The tone should feel conversational and human, not like categories or genres. Examples: 'Something scary but still heartwarming,' 'Feeling nostalgic for the 90s,' 'Want to laugh until I cry,' 'In the mood for a mind-bending thriller,' 'Something romantic but not cheesy,' 'Need an epic adventure to escape reality,' 'Feeling philosophical and deep,' 'Want to be inspired and motivated.', dont use - in answers`;
+    const prompt = `Generate a list of unique movie-watching moods. Each mood should be short (1 sentence or phrase), emotionally evocative, and specific enough to guide a recommendation engine. The tone should feel conversational and human, not like categories or genres. Examples: 'Something scary but still heartwarming,' 'Feeling nostalgic for the 90s,' 'Want to laugh until I cry,' 'In the mood for a mind-bending thriller,' 'Something romantic but not cheesy,' 'Need an epic adventure to escape reality,' 'Feeling philosophical and deep,' 'Want to be inspired and motivated.' Don't use dashes in answers.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -29,7 +27,7 @@ export async function POST(request: NextRequest) {
             content: prompt
           }
         ],
-        max_completion_tokens: 500,
+        max_tokens: 500,
         temperature: 1
       }),
     });
@@ -41,7 +39,12 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    const content = data.choices[0]?.message?.content;
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response structure from OpenAI');
+    }
+    
+    const content = data.choices[0].message.content;
     
     if (!content) {
       throw new Error('No content received from OpenAI');
