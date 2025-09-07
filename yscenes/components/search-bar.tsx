@@ -43,21 +43,21 @@ export default function SearchBar({ onSearch, loading = false, selectedActor, on
   const [isCarouselPaused, setIsCarouselPaused] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
   
-  // Auto-rotate carousel
+  // Auto-rotate carousel - optimized for performance
   useEffect(() => {
     // Stop carousel permanently if an actor is selected
     if (isCarouselPaused || localSelectedActor) return;
     
     const interval = setInterval(() => {
       setCarouselPosition(prev => {
-        // Calculate total width and move carousel
-        const totalWidth = 16 * 120; // 16 actors * ~120px each
-        const moveAmount = 2; // Move 2px each tick
+        // Calculate total width and move carousel  
+        const totalWidth = 41 * 120; // 41 actors * ~120px each (16 original + 25 new)
+        const moveAmount = 3; // Increased move amount to reduce update frequency
         // Reset position when reaching the end to create seamless loop
         const newPosition = prev + moveAmount;
         return newPosition >= totalWidth ? 0 : newPosition;
       });
-    }, 50); // Update every 50ms for smooth movement
+    }, 75); // Reduced frequency from 50ms to 75ms for better performance
     
     return () => clearInterval(interval);
   }, [isCarouselPaused, localSelectedActor]);
@@ -66,23 +66,73 @@ export default function SearchBar({ onSearch, loading = false, selectedActor, on
     "Need something scary but still heartwarming",
     "Feeling nostalgic for the 90s",
     "Want to laugh until I cry",
-    "In the mood for a mind-bending thriller",
+    "In the mood for a mind bending thriller",
     "Something romantic but not cheesy",
     "Need an epic adventure to escape reality",
     "Feeling philosophical and deep",
     "Want to be inspired and motivated"
   ];
 
-  // Dynamically fetch AI mood suggestions from ChatGPT (cheap model) using these as examples
+  // Expanded AI mood suggestions pool (58 total for variety)
   const aiMoodExamples = [
     "Need something scary but still heartwarming",
-    "Feeling nostalgic for the 90s",
+    "Feeling nostalgic for the 90s", 
     "Want to laugh until I cry",
-    "In the mood for a mind-bending thriller",
+    "In the mood for a mind bending thriller",
     "Something romantic but not cheesy",
     "Need an epic adventure to escape reality",
     "Feeling philosophical and deep",
-    "Want to be inspired and motivated"
+    "Want to be inspired and motivated",
+    "Craving a good cry with beautiful cinematography",
+    "Need something witty and clever",
+    "Want to feel like a badass action hero",
+    "In the mood for supernatural mystery",
+    "Something cozy and feel good",
+    "Want my mind completely blown",
+    "Need a heartwarming family story",
+    "Craving dark comedy that's actually funny",
+    "Want to explore different cultures",
+    "In the mood for time travel shenanigans",
+    "Something that makes me question everything",
+    "Want to fall in love with characters",
+    "Need a good old fashioned heist",
+    "Craving beautiful animation and storytelling",
+    "Want something set in space",
+    "In the mood for historical drama",
+    "Something that celebrates friendship",
+    "Want a musical that doesn't feel cringey",
+    "Need a detective story with twists",
+    "Craving post apocalyptic survival",
+    "Want something artsy but accessible",
+    "In the mood for unreliable narrators",
+    "Something about following your dreams",
+    "Want to see incredible fight choreography",
+    "Need a story about redemption",
+    "Craving small town charm",
+    "Want something psychological and creepy",
+    "In the mood for unlikely partnerships",
+    "Something that subverts expectations",
+    "Want to feel nostalgic for my childhood",
+    "Need a good underdog story",
+    "Craving beautiful period costumes",
+    "Want something about artificial intelligence",
+    "In the mood for magical realism",
+    "Something with incredible practical effects",
+    "Want to explore moral ambiguity",
+    "Need a story about second chances",
+    "Craving epic world building",
+    "Want something filmed in stunning locations",
+    "In the mood for found family vibes",
+    "Something that celebrates art and creativity",
+    "Want a thriller set on a single location",
+    "Need something about overcoming trauma",
+    "Craving stories about mentorship",
+    "Want something with unrealistic but fun action",
+    "In the mood for stories about identity",
+    "Something that makes me appreciate life",
+    "Want to see incredible costume design",
+    "Need a story about unlikely heroes",
+    "Craving something with perfect soundtrack"
   ];
 
   // State for AI-generated mood suggestions
@@ -104,8 +154,8 @@ export default function SearchBar({ onSearch, loading = false, selectedActor, on
       const data = await res.json();
       return data.suggestions as string[];
     } catch (err) {
-      // Fallback to examples if API fails
-      return aiMoodExamples;
+      // Fallback to randomized examples if API fails
+      return [...aiMoodExamples].sort(() => 0.5 - Math.random()).slice(0, 20);
     }
   }
 
@@ -118,8 +168,9 @@ export default function SearchBar({ onSearch, loading = false, selectedActor, on
         setAiMoodSuggestions(suggestions);
       } catch (error) {
         console.error('Failed to load AI mood suggestions:', error);
-        // Fallback to examples if API fails
-        setAiMoodSuggestions(aiMoodExamples);
+        // Fallback to expanded examples if API fails - use random selection from our big list
+        const randomizedExamples = [...aiMoodExamples].sort(() => 0.5 - Math.random()).slice(0, 20);
+        setAiMoodSuggestions(randomizedExamples);
       } finally {
         setIsLoadingAiSuggestions(false);
       }
@@ -412,19 +463,45 @@ export default function SearchBar({ onSearch, loading = false, selectedActor, on
       {/* Compact Actor Carousel */}
       <div className="w-full mt-4 pt-4 pb-2 overflow-hidden">
         <div 
-          className="flex gap-2 pb-2 scrollbar-hide px-2 transition-transform duration-100 ease-linear"
-          style={{ transform: `translateX(-${carouselPosition}px)` }}
+          className="flex gap-2 pb-2 scrollbar-hide px-2"
+          style={{ 
+            transform: `translateX(-${carouselPosition}px)`,
+            willChange: localSelectedActor ? 'auto' : 'transform',
+            transition: 'transform 0.1s linear'
+          }}
         >
           {[
+            // Original actors
             'Leonardo DiCaprio', 'Dwayne Johnson', 'Zendaya', 'Timothée Chalamet', 
             'Jennifer Lawrence', 'Ryan Gosling', 'Margot Robbie', 'Cillian Murphy',
             'Tom Holland', 'Florence Pugh', 'Robert Downey Jr.', 'Chris Hemsworth',
             'Emma Stone', 'Ryan Reynolds', 'Scarlett Johansson', 'Tom Hardy',
-            // Duplicate for seamless loop
+            // 25 additional popular actors
+            'Will Smith', 'Denzel Washington', 'Anne Hathaway', 'Brad Pitt',
+            'Natalie Portman', 'Michael B. Jordan', 'Saoirse Ronan', 'Oscar Isaac',
+            'Lupita Nyong\'o', 'Adam Driver', 'Gal Gadot', 'John Krasinski',
+            'Brie Larson', 'Chris Evans', 'Elizabeth Olsen', 'Paul Rudd',
+            'Tessa Thompson', 'Donald Glover', 'Alicia Vikander', 'Mahershala Ali',
+            'Rami Malek', 'Thomasin McKenzie', 'LaKeith Stanfield', 'Keanu Reeves',
+            'Dev Patel', 'Anya Taylor-Joy', 'John Boyega', 'Hailee Steinfeld',
+            'Michael Shannon', 'Tilda Swinton', 'Joaquin Phoenix', 'Amy Adams',
+            'Jake Gyllenhaal', 'Rooney Mara', 'Benedict Cumberbatch', 'Keira Knightley',
+            'Matthew McConaughey', 'Charlize Theron', 'Idris Elba', 'Viola Davis',
+            // Duplicate all for seamless loop
             'Leonardo DiCaprio', 'Dwayne Johnson', 'Zendaya', 'Timothée Chalamet', 
             'Jennifer Lawrence', 'Ryan Gosling', 'Margot Robbie', 'Cillian Murphy',
             'Tom Holland', 'Florence Pugh', 'Robert Downey Jr.', 'Chris Hemsworth',
-            'Emma Stone', 'Ryan Reynolds', 'Scarlett Johansson', 'Tom Hardy'
+            'Emma Stone', 'Ryan Reynolds', 'Scarlett Johansson', 'Tom Hardy',
+            'Will Smith', 'Denzel Washington', 'Anne Hathaway', 'Brad Pitt',
+            'Natalie Portman', 'Michael B. Jordan', 'Saoirse Ronan', 'Oscar Isaac',
+            'Lupita Nyong\'o', 'Adam Driver', 'Gal Gadot', 'John Krasinski',
+            'Brie Larson', 'Chris Evans', 'Elizabeth Olsen', 'Paul Rudd',
+            'Tessa Thompson', 'Donald Glover', 'Alicia Vikander', 'Mahershala Ali',
+            'Rami Malek', 'Thomasin McKenzie', 'LaKeith Stanfield', 'Keanu Reeves',
+            'Dev Patel', 'Anya Taylor-Joy', 'John Boyega', 'Hailee Steinfeld',
+            'Michael Shannon', 'Tilda Swinton', 'Joaquin Phoenix', 'Amy Adams',
+            'Jake Gyllenhaal', 'Rooney Mara', 'Benedict Cumberbatch', 'Keira Knightley',
+            'Matthew McConaughey', 'Charlize Theron', 'Idris Elba', 'Viola Davis'
           ].map((actor, index) => {
             // Define colors for selected state
             const selectedColors = [

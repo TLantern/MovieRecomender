@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Simple cache for AI mood suggestions
+let cachedSuggestions: string[] | null = null;
+let cacheExpiry = 0;
+const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
+
 export async function POST(request: NextRequest) {
   try {
+    // Check cache first
+    if (cachedSuggestions && Date.now() < cacheExpiry) {
+      return NextResponse.json({ suggestions: cachedSuggestions });
+    }
+
     // Check if OpenAI API key is available
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
@@ -11,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `Generate a list of unique movie-watching moods. Each mood should be short (1 sentence or phrase), emotionally evocative, and specific enough to guide a recommendation engine. The tone should feel conversational and human, not like categories or genres. Examples: 'Something scary but still heartwarming,' 'Feeling nostalgic for the 90s,' 'Want to laugh until I cry,' 'In the mood for a mind-bending thriller,' 'Something romantic but not cheesy,' 'Need an epic adventure to escape reality,' 'Feeling philosophical and deep,' 'Want to be inspired and motivated.' Don't use dashes in answers.`;
+    const prompt = `Generate a diverse list of 15-20 unique movie-watching moods. Each mood should be short (1 sentence or phrase), emotionally evocative, and specific enough to guide a recommendation engine. The tone should feel conversational and human, not like categories or genres. Make them creative, varied, and cover different emotions, genres, and situations. Examples: 'Something scary but still heartwarming,' 'Feeling nostalgic for the 90s,' 'Want to laugh until I cry,' 'In the mood for a mind-bending thriller,' 'Something romantic but not cheesy,' 'Need an epic adventure to escape reality,' 'Feeling philosophical and deep,' 'Want to be inspired and motivated.' IMPORTANT: Do NOT use any dashes, hyphens, or minus signs in your responses. Use only commas, periods, and regular words. Make each suggestion unique and specific.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -27,7 +37,7 @@ export async function POST(request: NextRequest) {
             content: prompt
           }
         ],
-        max_tokens: 500,
+        max_completion_tokens: 4096,
         temperature: 1
       }),
     });
@@ -60,7 +70,12 @@ export async function POST(request: NextRequest) {
         // Remove numbering, quotes, and extra formatting
         return line.replace(/^\d+\.\s*/, '').replace(/^["']|["']$/g, '').trim();
       })
-      .filter((line: string) => line.length > 0);
+      .filter((line: string) => line.length > 0)
+      .filter((line: string) => !line.includes('-') && !line.includes('–') && !line.includes('—')); // Remove any suggestions with dashes
+
+    // Cache the successful result
+    cachedSuggestions = suggestions;
+    cacheExpiry = Date.now() + CACHE_DURATION;
 
     return NextResponse.json({ suggestions });
     

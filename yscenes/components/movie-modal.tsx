@@ -124,7 +124,10 @@ export default function MovieModal({ movie, isOpen, onClose, isBookmarked, onBoo
                   alt={provider.provider_name}
                   width={32}
                   height={32}
+                  loading="lazy"
+                  sizes="32px"
                   className="rounded"
+                  unoptimized={false}
                 />
                 <span className="text-white text-sm font-medium">{provider.provider_name}</span>
               </button>
@@ -193,9 +196,12 @@ export default function MovieModal({ movie, isOpen, onClose, isBookmarked, onBoo
                     }
                     alt={`${movie.title} poster`}
                     fill
-                    priority
+                    priority={true}
+                    sizes="(max-width: 768px) 200px, 200px"
                     className="object-cover rounded-lg shadow-lg"
                     unoptimized={false}
+                    placeholder="blur"
+                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkbHB0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                   />
                 </div>
               </div>

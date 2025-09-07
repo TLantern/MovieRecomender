@@ -406,6 +406,8 @@ const SocialsButton = ({ movies = [], mood = "", username = "User" }: SocialsBut
                 onClick={(e) => {
                   e.stopPropagation();
                   const url = createLink();
+                  console.log('Share now - Generated URL:', url);
+                  console.log('Share now - Movies included:', movies.slice(0, 3).map(m => `${m.title} (${m.year})`));
                   setIsDescriptionStep(true);
                 }}
                 className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-100 transition-all duration-200 hover:scale-105 shadow-lg text-base whitespace-nowrap"
@@ -416,9 +418,11 @@ const SocialsButton = ({ movies = [], mood = "", username = "User" }: SocialsBut
                 onClick={async (e) => {
                   e.stopPropagation();
                   const url = createLink();
+                  console.log('Generated share URL:', url);
+                  console.log('URL contains movies:', movies.slice(0, 3).map(m => `${m.title} (${m.year})`));
                   const success = await copyLink(url);
                   if (success) {
-                    alert('Link copied!');
+                    alert('Link copied! Share this to show your Top 3 movie list.');
                   }
                 }}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all duration-200 shadow-lg text-base whitespace-nowrap"
@@ -440,39 +444,87 @@ const SocialsButton = ({ movies = [], mood = "", username = "User" }: SocialsBut
                     const elements = modalRef.current.querySelectorAll('*');
                     elements.forEach((el) => {
                       const computedStyle = window.getComputedStyle(el);
-                      const properties = ['background-color', 'color', 'border-color'];
+                      const properties = ['background-color', 'color', 'border-color', 'box-shadow', 'text-shadow', 'outline-color'];
                       
                       properties.forEach(prop => {
                         const value = computedStyle.getPropertyValue(prop);
-                        if (value && (value.includes('lab(') || value.includes('hsl(') || value.includes('rgb('))) {
-                          // Convert to hex or fallback to safe colors
-                          let safeColor = '#000000';
-                          if (value.includes('rgb(')) {
-                            // Keep rgb values as they're supported
-                            safeColor = value;
-                          } else if (value.includes('hsl(')) {
-                            // Convert hsl to hex (simplified)
-                            safeColor = '#ffffff';
-                          } else {
-                            // For lab() and other unsupported functions, use fallback
-                            safeColor = '#000000';
-                          }
+                        if (value && value.trim() !== '' && value !== 'none') {
+                          // Check for unsupported color functions
+                          const hasUnsupportedColor = value.includes('lab(') || 
+                                                     value.includes('lch(') || 
+                                                     value.includes('oklab(') || 
+                                                     value.includes('oklch(') ||
+                                                     value.includes('color(') ||
+                                                     value.includes('color-mix(');
                           
-                          originalStyles.set(el, { element: el, property: prop, value: (el as HTMLElement).style[prop as any] });
-                          (el as HTMLElement).style[prop as any] = safeColor;
+                          if (hasUnsupportedColor) {
+                            // Fallback colors based on property
+                            let safeColor = '#000000';
+                            if (prop === 'background-color') {
+                              safeColor = '#ffffff'; // White background
+                            } else if (prop === 'color') {
+                              safeColor = '#000000'; // Black text
+                            } else if (prop === 'border-color') {
+                              safeColor = '#cccccc'; // Light gray border
+                            } else if (prop === 'box-shadow' || prop === 'text-shadow') {
+                              safeColor = 'none'; // Remove shadows with unsupported colors
+                            } else if (prop === 'outline-color') {
+                              safeColor = '#000000'; // Black outline
+                            }
+                            
+                            originalStyles.set(el, { element: el, property: prop, value: (el as HTMLElement).style[prop as any] });
+                            (el as HTMLElement).style[prop as any] = safeColor;
+                          }
                         }
                       });
                     });
                     
                     // Dynamically import html2canvas for client-side rendering
                     const html2canvas = (await import('html2canvas')).default;
-                    const canvas = await html2canvas(modalRef.current, {
-                      useCORS: true,
-                      allowTaint: true,
-                      height: modalRef.current.offsetHeight,
-                      width: modalRef.current.offsetWidth,
-                      background: '#000000',
-                    });
+                    
+                    console.log('Capturing modal element:', modalRef.current);
+                    console.log('Modal dimensions:', modalRef.current.offsetWidth, 'x', modalRef.current.offsetHeight);
+                    
+                    let canvas;
+                    try {
+                      canvas = await html2canvas(modalRef.current, {
+                        useCORS: true,
+                        allowTaint: true,
+                        height: modalRef.current.offsetHeight,
+                        width: modalRef.current.offsetWidth,
+                        background: '#000000',
+                        logging: false
+                      });
+                    } catch (colorError) {
+                      console.warn('html2canvas failed with color parsing error, retrying with basic settings:', colorError);
+                      // Fallback with minimal settings and safer color handling
+                      try {
+                        canvas = await html2canvas(modalRef.current, {
+                          background: '#ffffff',
+                          logging: false,
+                          useCORS: false,
+                          allowTaint: false
+                        });
+                      } catch (fallbackError) {
+                        console.error('html2canvas completely failed:', fallbackError);
+                        // Create a simple text-based fallback instead of failing
+                        const fallbackCanvas = document.createElement('canvas');
+                        fallbackCanvas.width = 800;
+                        fallbackCanvas.height = 600;
+                        const ctx = fallbackCanvas.getContext('2d');
+                        if (ctx) {
+                          ctx.fillStyle = '#000000';
+                          ctx.fillRect(0, 0, 800, 600);
+                          ctx.fillStyle = '#ffffff';
+                          ctx.font = '24px Arial';
+                          ctx.textAlign = 'center';
+                          ctx.fillText('YScenes Movie Recommendations', 400, 300);
+                          ctx.font = '16px Arial';
+                          ctx.fillText('Check out my movie recommendations!', 400, 350);
+                        }
+                        canvas = fallbackCanvas;
+                      }
+                    }
                     
                     // Restore original styles
                     originalStyles.forEach(({ element, property, value }) => {
@@ -483,14 +535,18 @@ const SocialsButton = ({ movies = [], mood = "", username = "User" }: SocialsBut
                     if (closeButton) closeButton.style.display = '';
                     
                     // Create download link
+                    const dataUrl = canvas.toDataURL('image/png');
+                    console.log('Generated image data URL length:', dataUrl.length);
+                    
                     const link = document.createElement('a');
-                    link.download = 'yscenes-share.png';
-                    link.href = canvas.toDataURL('image/png');
+                    link.download = 'yscenes-top3-movies.png';
+                    link.href = dataUrl;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
                     
-                    alert('Image downloaded successfully!');
+                    console.log('Modal image downloaded successfully with movies:', movies.slice(0, 3).map(m => m.title));
+                    alert('Your Top 3 movie list downloaded successfully!');
                   } catch (error) {
                     console.error('Error capturing image:', error);
                     alert('Failed to download image. Please try again.');

@@ -1,17 +1,31 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 // import Carousel from '../components/carousel';
 import Navbar from '../components/navbar';
 import SearchBar from '../components/search-bar';
 import Bookmark from '../components/bookmark';
-import MovieModal from '../components/movie-modal';
-import PaywallModal from '../components/paywall-modal';
 import { useSessionMemory } from '../hooks/useSessionMemory';
 import { useSearchLimit } from '../hooks/useSearchLimit';
 import SocialsButton from '../components/socials';
 import Footer from '../components/footer';
 // import { useMovies } from '../hooks/useMovies';
+
+// Dynamic imports for components that aren't needed immediately
+const MovieModal = dynamic(() => import('../components/movie-modal'), {
+  ssr: false,
+  loading: () => <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+  </div>
+});
+
+const PaywallModal = dynamic(() => import('../components/paywall-modal'), {
+  ssr: false,
+  loading: () => <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+  </div>
+});
 
 // Typewriter Loading Component
 const TypewriterLoading = () => {
@@ -46,22 +60,22 @@ const TypewriterLoading = () => {
     const currentSaying = loadingSayings[currentSayingIndex];
     
     if (isTyping && currentText.length < currentSaying.length) {
-      // Typing effect
+      // Typing effect - optimized frequency
       const timeout = setTimeout(() => {
         setCurrentText(currentSaying.slice(0, currentText.length + 1));
-      }, 80); // Slower typewriter speed
+      }, 90); // Slightly optimized but still smooth
       return () => clearTimeout(timeout);
     } else if (isTyping && currentText.length === currentSaying.length) {
-      // Pause for 2 seconds after fully typed
+      // Pause for 2.5 seconds after fully typed 
       const timeout = setTimeout(() => {
         setIsTyping(false);
-      }, 2000);
+      }, 2500);
       return () => clearTimeout(timeout);
     } else if (!isTyping && currentText.length > 0) {
       // Untyping effect (backspace)
       const timeout = setTimeout(() => {
         setCurrentText(currentText.slice(0, -1));
-      }, 30); // Faster untyping
+      }, 40); // Optimized untyping speed
       return () => clearTimeout(timeout);
     } else if (!isTyping && currentText.length === 0) {
       // Move to next saying
@@ -454,7 +468,7 @@ export default function Home() {
                 <div className="flex justify-center mb-8">
                   <div className="flex flex-col items-center w-full">
                     <h1 className="text-white text-lg font-body font-bold drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] -mb-5 mt-6">
-                      Compare your Top 3 with your friends, who wins?                    
+                      Compare your Top 2 with your friends, who wins?                    
                       </h1>
                     <SocialsButton movies={searchResults} mood={currentMood} username="MovieLover" />
                   </div>
@@ -462,8 +476,8 @@ export default function Home() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {searchResults.map((movie, index) => {
-                    // Check if this is the first recommendation and the middle card (index 1)
-                    const isMasterpiece = searchResults.length === 3 && index === 1 && !currentMood.includes('more');
+                    // Check if this is the first recommendation and highlight the first movie for 2-movie results
+                    const isMasterpiece = searchResults.length === 2 && index === 0 && !currentMood.includes('more');
                     
                     return (
                       <div 
@@ -521,6 +535,9 @@ export default function Home() {
                                 src={movie.poster_url || 'https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop'} 
                                 alt={`${movie.title} poster`}
                                 className="w-full h-full object-cover rounded-lg shadow-lg"
+                                loading={index < 2 ? "eager" : "lazy"}
+                                decoding="async"
+                                sizes="(max-width: 768px) 200px, 200px"
                                 onError={(e) => {
                                   e.currentTarget.src = 'https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop';
                                 }}

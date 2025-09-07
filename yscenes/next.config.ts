@@ -16,7 +16,19 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
   },
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-slider'],
+    webpackBuildWorker: true,
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  poweredByHeader: false,
+  compress: true,
+  swcMinify: true,
 };
 
 export default nextConfig;
