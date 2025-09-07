@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Slider } from './ui/slider';
 import Image from 'next/image';
 import AILoader from './ai-loader';
@@ -11,9 +12,12 @@ interface SearchBarProps {
   loading?: boolean;
   selectedActor?: string;
   onActorSelect?: (actor: string) => void;
+  searchCount?: number;
+  isVipUser?: boolean;
+  canSearch?: boolean;
 }
 
-export default function SearchBar({ onSearch, loading = false, selectedActor, onActorSelect }: SearchBarProps) {
+export default function SearchBar({ onSearch, loading = false, selectedActor, onActorSelect, searchCount = 0, isVipUser = false, canSearch = true }: SearchBarProps) {
   const { user, isSignedIn } = useUser();
   const signUpButtonRef = useRef<HTMLButtonElement>(null);
   const [localSelectedActor, setLocalSelectedActor] = useState<string>('');
@@ -343,18 +347,45 @@ export default function SearchBar({ onSearch, loading = false, selectedActor, on
         </div>
       </div>
       
+
       {/* Watch Now Button */}
       <div className="flex justify-center mb-6">
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="px-4 py-2.5 text-sm border-none rounded-lg bg-white text-black cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 hover:bg-gray-100"
-          style={{
-            boxShadow: '0 10px 20px -10px rgba(0,0,0,0.2)'
-          }}
-        >
-          {loading ? 'Finding Films...' : 'Watch Now'}
-        </button>
+        {(!canSearch && !isVipUser) ? (
+          isSignedIn ? (
+            <Link href="/upgrade">
+              <button
+                className="px-4 py-2.5 text-sm border-none rounded-lg bg-white text-black cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 hover:bg-gray-100"
+                style={{
+                  boxShadow: '0 10px 20px -10px rgba(0,0,0,0.2)'
+                }}
+              >
+                Upgrade to Search
+              </button>
+            </Link>
+          ) : (
+            <SignUpButton mode="modal" fallbackRedirectUrl="/upgrade">
+              <button
+                className="px-4 py-2.5 text-sm border-none rounded-lg bg-white text-black cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 hover:bg-gray-100"
+                style={{
+                  boxShadow: '0 10px 20px -10px rgba(0,0,0,0.2)'
+                }}
+              >
+                Upgrade to Search
+              </button>
+            </SignUpButton>
+          )
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="px-4 py-2.5 text-sm border-none rounded-lg bg-white text-black cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 hover:bg-gray-100"
+            style={{
+              boxShadow: '0 10px 20px -10px rgba(0,0,0,0.2)'
+            }}
+          >
+            {loading ? 'Finding Films...' : 'Watch Now'}
+          </button>
+        )}
       </div>
       
                     {/* Year Range Slider */}

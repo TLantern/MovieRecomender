@@ -8,8 +8,8 @@ export default function UpgradePage() {
 
   const handleStartTrial = () => {
     const checkoutUrl = isAnnual 
-      ? "https://buy.stripe.com/test_bJedR85SYbCfeZh58AefC01" 
-      : "https://buy.stripe.com/test_7sY3cu0yE7lZ2cv8kMefC00";
+      ? "https://buy.stripe.com/9B614m2Kw8hy6ZcdJFbbG00" 
+      : "https://buy.stripe.com/aFa8wO5WI9lC3N07lhbbG01";
     window.open(checkoutUrl, '_blank');
   };
 

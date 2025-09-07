@@ -5,7 +5,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 
-export default function Navbar() {
+interface NavbarProps {
+  searchCount?: number;
+  isVipUser?: boolean;
+  canSearch?: boolean;
+}
+
+export default function Navbar({ searchCount = 0, isVipUser = false, canSearch = true }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -66,7 +72,31 @@ export default function Navbar() {
           </div>
 
           {/* Authentication Buttons - Right side */}
-          <div className="absolute right-4 sm:right-6 lg:right-8 flex items-center">
+          <div className="absolute right-4 sm:right-6 lg:right-8 flex items-center space-x-3">
+            {/* Search Limit Indicator */}
+            {!isVipUser && (
+              <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 border border-purple-500/30">
+                <div className="text-center">
+                  <div className="text-purple-300 text-xs font-medium">
+                    {searchCount === 0 ? '🎬 1 Free' : 
+                     searchCount === 1 ? '⚠️ Used' : 
+                     '🔒 Upgrade'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIP User Indicator */}
+            {isVipUser && (
+              <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 backdrop-blur-sm rounded-lg px-3 py-2 border border-purple-500/50">
+                <div className="text-center">
+                  <div className="text-purple-300 text-xs font-medium">
+                    🎉 VIP
+                  </div>
+                </div>
+              </div>
+            )}
+
             <SignedOut>
               <div className="flex items-center space-x-3">
                 {/* Sign Up Button */}

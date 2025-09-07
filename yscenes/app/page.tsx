@@ -6,7 +6,9 @@ import Navbar from '../components/navbar';
 import SearchBar from '../components/search-bar';
 import Bookmark from '../components/bookmark';
 import MovieModal from '../components/movie-modal';
+import PaywallModal from '../components/paywall-modal';
 import { useSessionMemory } from '../hooks/useSessionMemory';
+import { useSearchLimit } from '../hooks/useSearchLimit';
 import SocialsButton from '../components/socials';
 import Footer from '../components/footer';
 // import { useMovies } from '../hooks/useMovies';
@@ -97,6 +99,13 @@ export default function Home() {
     startFreshSession,
     getSessionStats 
   } = useSessionMemory();
+  const { 
+    searchCount, 
+    isLimitReached, 
+    canSearch, 
+    isVipUser, 
+    incrementSearchCount 
+  } = useSearchLimit();
   const [searchResults, setSearchResults] = useState<MovieResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -109,6 +118,7 @@ export default function Home() {
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
   const [selectedMovie, setSelectedMovie] = useState<MovieResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPaywallOpen, setIsPaywallOpen] = useState(false);
 
   // Auto-start fresh session if current one is expired
   useEffect(() => {
@@ -119,11 +129,22 @@ export default function Home() {
   }, [isExpired, startFreshSession]);
 
   const handleSearch = async (mood: string, yearRange: [number, number], actor?: string) => {
+    // Check if user has reached search limit
+    if (!canSearch && !isVipUser) {
+      setIsPaywallOpen(true);
+      return;
+    }
+
     setSearchLoading(true);
     setShowResults(true);
     setSearchResults([]);
     setCurrentMood(mood);
     setCurrentYearRange(yearRange);
+
+    // Increment search count for non-VIP users
+    if (!isVipUser) {
+      incrementSearchCount();
+    }
 
     // Use existing session - don't create new session for new search
     // New sessions are only created on page refresh or session expiry
@@ -224,6 +245,15 @@ export default function Home() {
     }));
   };
 
+  const handleClosePaywall = () => {
+    setIsPaywallOpen(false);
+  };
+
+  const handleUpgrade = () => {
+    setIsPaywallOpen(false);
+    // The modal will handle the actual upgrade flow
+  };
+
   const handleBottomEmailSubmit = async () => {
     const emailValue = bottomEmail.trim();
     if (!emailValue) {
@@ -260,7 +290,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pb-16">
-      <Navbar />
+      <Navbar 
+        searchCount={searchCount}
+        isVipUser={isVipUser}
+        canSearch={canSearch}
+      />
       <main className="pt-0">
         <div className="container mx-auto">
           <div className="flex flex-col lg:flex-row gap-6 justify-center items-start max-w-6xl mx-auto pt-8 px-4">
@@ -270,9 +304,16 @@ export default function Home() {
               {/* This div sets up a relatively positioned container with a high z-index (z-25) to ensure its children (like the SearchBar) appear above background effects or overlays. */}
               <div className="relative z-35">
               <h1 className="text-4xl font-bold text-center text-white mb-8 pt-8 drop-shadow-[0_0_20px_rgba(200,4,24,0.3)] font-heading" style={{animation: 'fadeInOut 3s ease-in-out infinite'}}>
-              What's <span className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 bg-clip-text text-transparent animate-pulse" style={{animationDuration: '3s'}}>the Mood</span> for <span className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 bg-clip-text text-transparent animate-pulse" style={{animationDuration: '3s'}}>Tonight</span>?
+              What's <span className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 bg-clip-text text-transparent animate-pulse" style={{animationDuration: '3s'}}>the Mood</span> for <span className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 bg-clip-text text-transparent animate-pulse" style={{animationDuration: '3s'}}>Tonight </span>?
             </h1>
-                <SearchBar onSearch={handleSearch} loading={searchLoading} selectedActor={selectedActor} />
+                <SearchBar 
+                  onSearch={handleSearch} 
+                  loading={searchLoading} 
+                  selectedActor={selectedActor}
+                  searchCount={searchCount}
+                  isVipUser={isVipUser}
+                  canSearch={canSearch}
+                />
               </div>
             </div>
           
@@ -570,6 +611,14 @@ export default function Home() {
           onBookmarkToggle={handleBookmarkToggle}
         />
       )}
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        isOpen={isPaywallOpen}
+        onClose={handleClosePaywall}
+        onUpgrade={handleUpgrade}
+      />
+      
       <Footer />
     </div>
   );

@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Hide Clerk development mode banner */
+[data-clerk-development-mode] {
+  display: none !important;
+}
+
+/* Alternative selector for Clerk banner */
+div[style*="position: fixed"][style*="bottom: 0"] {
+  display: none !important;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
