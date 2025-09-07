@@ -146,10 +146,17 @@ export default function PaywallModal({ isOpen, onClose, onUpgrade }: PaywallModa
             {/* Upgrade Button */}
             <button
               onClick={handleUpgrade}
-              className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all duration-200 hover:scale-105 font-bold shadow-lg text-lg mb-4"
+              className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all duration-200 hover:scale-105 font-bold shadow-lg text-lg mb-2"
             >
               Start FREE Trial Now
             </button>
+
+            {/* Signup Count */}
+            <div className="text-center mb-4">
+              <p className="text-gray-400 text-xs">
+                43+ signed up today
+              </p>
+            </div>
 
             {/* Trust Indicators */}
             <div className="flex justify-center items-center space-x-4 text-gray-400 text-xs">

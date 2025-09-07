@@ -397,37 +397,38 @@ export default function Home() {
             </div>
           )}
           
-          {/* Top Email Form - positioned below main card when no results are displayed */}
-          {!showResults && (
-            <div className="text-center mt-6 max-w-6xl mx-auto">
-              <div className="relative z-10 text-center mb-10">
-                <input 
-                  type="email" 
-                  placeholder="Your email for weekly picks" 
-                  className="px-3 py-2 text-sm w-72 max-w-[80vw] rounded border border-gray-600 bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 mr-2 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300"
-                  value={bottomEmail}
-                  onChange={(e) => setBottomEmail(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleBottomEmailSubmit()}
-                />
-                <button 
-                  onClick={handleBottomEmailSubmit}
-                  className="px-4 py-2 text-sm border-none rounded bg-black text-white cursor-pointer shadow-md hover:shadow-lg transition-all duration-200 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:scale-105 transform transition-all duration-300"
-                >
-                  Join the List
-                </button>
-                {bottomEmailMessage && (
-                  <div className="mt-2 text-green-400 text-sm">
-                    {bottomEmailMessage}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
         
+        {/* Email Form - positioned above loading/results */}
+        {showResults && (
+          <div className="text-center mt-4 max-w-6xl mx-auto px-4">
+            <div className="relative z-10 text-center mb-6">
+              <input 
+                type="email" 
+                placeholder="Enter your email for weekly picks" 
+                className="px-3 py-2 text-sm w-72 max-w-[80vw] rounded border border-gray-600 bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 mr-2 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300"
+                value={bottomEmail}
+                onChange={(e) => setBottomEmail(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleBottomEmailSubmit()}
+              />
+              <button 
+                onClick={handleBottomEmailSubmit}
+                className="px-4 py-2 text-sm border-none rounded bg-black text-white cursor-pointer shadow-md hover:shadow-lg transition-all duration-200 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:scale-105 transform transition-all duration-300"
+              >
+                Join the List
+              </button>
+              {bottomEmailMessage && (
+                <div className="mt-2 text-green-400 text-sm">
+                  {bottomEmailMessage}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Search Results */}
         {showResults && (
-          <div className="container mx-auto px-4 max-w-6xl mt-4">
+          <div className="container mx-auto px-4 max-w-6xl">
             {searchLoading ? (
               <div className="text-center py-8">
                 {/* From Uiverse.io by Donewenfu */}
@@ -546,7 +547,7 @@ export default function Home() {
                 <div className="relative z-10 text-center">
                   <input 
                     type="email" 
-                    placeholder="Your email for weekly picks" 
+                    placeholder="Enter your email for weekly picks" 
                     className="px-3 py-2 text-sm w-72 max-w-[80vw] rounded border border-gray-600 bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 mr-2 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300"
                     value={bottomEmail}
                     onChange={(e) => setBottomEmail(e.target.value)}

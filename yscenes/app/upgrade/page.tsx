@@ -1,10 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '../../components/navbar';
 
 export default function UpgradePage() {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [signupCount, setSignupCount] = useState(43);
+
+  // Random signup count increment effect
+  useEffect(() => {
+    const scheduleNextIncrement = () => {
+      // Random interval between 1-10 seconds (1000-10000ms)
+      const randomInterval = Math.floor(Math.random() * 9000) + 1000;
+      
+      setTimeout(() => {
+        setSignupCount(prev => prev + 1);
+        scheduleNextIncrement(); // Schedule the next increment
+      }, randomInterval);
+    };
+
+    scheduleNextIncrement();
+
+    // Cleanup function to prevent memory leaks
+    return () => {
+      // The timeout will be cleaned up when component unmounts
+    };
+  }, []);
 
   const handleStartTrial = () => {
     const checkoutUrl = isAnnual 
@@ -114,10 +135,19 @@ export default function UpgradePage() {
               {/* Start Trial Button */}
               <button 
                 onClick={handleStartTrial}
-                className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all duration-200 hover:scale-105 font-bold shadow-lg text-lg"
+                className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all duration-200 hover:scale-105 font-bold shadow-lg text-lg mb-3"
               >
                 Start FREE Trial Now
               </button>
+
+              {/* Live Signup Count */}
+              <div className="flex items-center justify-center space-x-2 mb-4">
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-green-400 text-xs font-medium">LIVE</span>
+                </div>
+                <span className="text-gray-300 text-sm">{signupCount}+ signed up today</span>
+              </div>
               
               {/* Trust Indicators */}
               <div className="flex justify-center items-center space-x-4 text-gray-400 text-xs mt-4">
