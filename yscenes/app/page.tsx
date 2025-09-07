@@ -20,26 +20,26 @@ const TypewriterLoading = () => {
   const [isTyping, setIsTyping] = useState(true);
   
   const loadingSayings = [
-    "Spinning the popcorn machine",
-    "Negotiating with the movie gods",
-    "Untangling film reels from the 90s",
-    "Teaching AI how to cry at sad scenes",
-    "Auditioning movies for you",
-    "Feeding the projector gremlins",
-    "Arguing with critics in the basement",
-    "Testing if rom-coms still exist",
-    "Unlocking the director's cut",
-    "Rewinding VHS tapes at light speed",
-    "Casting the right vibe",
-    "Spilling popcorn everywhere",
-    "Running background checks on villains",
-    "Checking if aliens like chick flicks",
-    "Subtitling in Martian language",
-    "Loading emotional baggage",
-    "Balancing explosions and kisses",
-    "Hacking into Netflix's secret vault",
-    "Shuffling Oscar speeches",
-    "Asking your inner critic politely to shut up"
+    "Spinning the popcorn machine...",
+    "Negotiating with the movie gods...",
+    "Untangling film reels from the 90s...",
+    "Teaching AI how to cry at sad scenes...",
+    "Auditioning movies for you...",
+    "Feeding the projector gremlins...",
+    "Arguing with critics in the basement...",
+    "Testing if rom-coms still exist...",
+    "Unlocking the director's cut...",
+    "Rewinding VHS tapes at light speed...",
+    "Casting the right vibe...",
+    "Spilling popcorn everywhere...",
+    "Running background checks on villains...",
+    "Checking if aliens like chick flicks...",
+    "Subtitling in Martian language...",
+    "Loading emotional baggage...",
+    "Balancing explosions and kisses...",
+    "Hacking into Netflix's secret vault...",
+    "Shuffling Oscar speeches...",
+    "Asking your inner critic politely to shut up..."
   ];
 
   useEffect(() => {
@@ -193,6 +193,17 @@ export default function Home() {
 
   const handleMoreRecommendations = async () => {
     if (searchLoading || moreLoading) return;
+    
+    // Check if user has reached search limit before allowing more recommendations
+    if (!canSearch && !isVipUser) {
+      setIsPaywallOpen(true);
+      return;
+    }
+    
+    // Increment search count for non-VIP users since "More" is also a search action
+    if (!isVipUser) {
+      incrementSearchCount();
+    }
     
     setMoreLoading(true);
     
@@ -433,7 +444,7 @@ export default function Home() {
               <div className="text-center py-8">
                 {/* From Uiverse.io by Donewenfu */}
                 <TypewriterLoading />
-                <div className="loader mt-4">
+                <div className="loader mt-8">
                   <div className="jimu-primary-loading"></div>
                 </div>
               </div>
