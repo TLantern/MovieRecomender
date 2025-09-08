@@ -1,0 +1,277 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import Stripe from 'stripe';
+import { subscriptionService } from '../../../../lib/subscription-service';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-08-27.basil'
+});
+
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.text();
+    const headersList = await headers();
+    const signature = headersList.get('stripe-signature');
+
+    if (!signature) {
+      console.error('No Stripe signature found');
+      return NextResponse.json({ error: 'No signature' }, { status: 400 });
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err);
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    console.log('Stripe webhook event received:', event.type);
+
+    // Handle the event
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutCompleted(session);
+        break;
+      }
+
+      case 'customer.subscription.created': {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionCreated(subscription);
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionUpdated(subscription);
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionDeleted(subscription);
+        break;
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handlePaymentSucceeded(invoice);
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handlePaymentFailed(invoice);
+        break;
+      }
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    return NextResponse.json({ received: true });
+
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return NextResponse.json({ error: 'Webhook error' }, { status: 500 });
+  }
+}
+
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  try {
+    console.log('Checkout completed for session:', session.id);
+
+    if (!session.customer || !session.client_reference_id) {
+      console.error('Missing customer or client_reference_id in session');
+      return;
+    }
+
+    const customerId = session.customer as string;
+    const userId = session.client_reference_id; // This should be the Clerk user ID
+    const email = session.customer_details?.email;
+
+    if (!email) {
+      console.error('No email found in checkout session');
+      return;
+    }
+
+    // Get the subscription details from Stripe
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'active',
+      limit: 1
+    });
+
+    if (subscriptions.data.length === 0) {
+      console.error('No active subscription found for customer');
+      return;
+    }
+
+    const subscription = subscriptions.data[0];
+    const priceId = subscription.items.data[0]?.price.id;
+    
+    // Determine subscription type based on price ID
+    const subscriptionType = getSubscriptionType(priceId);
+
+    // Activate the subscription in our database
+    const success = await subscriptionService.activateSubscription(
+      userId,
+      email,
+      customerId,
+      subscription.id,
+      priceId || '',
+      subscriptionType
+    );
+
+    if (success) {
+      console.log(`Subscription activated for user ${userId}`);
+    } else {
+      console.error(`Failed to activate subscription for user ${userId}`);
+    }
+
+  } catch (error) {
+    console.error('Error handling checkout completed:', error);
+  }
+}
+
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  console.log('Subscription created:', subscription.id);
+  // This is usually handled by checkout.session.completed
+}
+
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  try {
+    console.log('Subscription updated:', subscription.id);
+
+    const customerId = subscription.customer as string;
+    const userSubscription = await subscriptionService.getSubscriptionByStripeCustomerId(customerId);
+
+    if (!userSubscription) {
+      console.error('User subscription not found for customer:', customerId);
+      return;
+    }
+
+    // Update subscription status based on Stripe status
+    let status: 'active' | 'cancelled' | 'expired' = 'active';
+    
+    if (subscription.status === 'canceled' || subscription.status === 'incomplete_expired') {
+      status = 'cancelled';
+    } else if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
+      status = 'expired';
+    }
+
+    await subscriptionService.upsertUserSubscription({
+      user_id: userSubscription.user_id,
+      subscription_status: status,
+      subscription_end_date: (subscription as any).current_period_end ? new Date((subscription as any).current_period_end * 1000).toISOString() : undefined
+    });
+
+    console.log(`Subscription updated for user ${userSubscription.user_id}: ${status}`);
+
+  } catch (error) {
+    console.error('Error handling subscription updated:', error);
+  }
+}
+
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  try {
+    console.log('Subscription deleted:', subscription.id);
+
+    const customerId = subscription.customer as string;
+    const userSubscription = await subscriptionService.getSubscriptionByStripeCustomerId(customerId);
+
+    if (!userSubscription) {
+      console.error('User subscription not found for customer:', customerId);
+      return;
+    }
+
+    // Cancel the subscription in our database
+    await subscriptionService.cancelSubscription(userSubscription.user_id);
+    
+    console.log(`Subscription cancelled for user ${userSubscription.user_id}`);
+
+  } catch (error) {
+    console.error('Error handling subscription deleted:', error);
+  }
+}
+
+async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+  try {
+    console.log('Payment succeeded for invoice:', invoice.id);
+
+    if (!(invoice as any).subscription || typeof (invoice as any).subscription !== 'string') {
+      return; // Not a subscription payment
+    }
+
+    const customerId = invoice.customer as string;
+    const userSubscription = await subscriptionService.getSubscriptionByStripeCustomerId(customerId);
+
+    if (!userSubscription) {
+      console.error('User subscription not found for customer:', customerId);
+      return;
+    }
+
+    // Ensure subscription is active after successful payment
+    await subscriptionService.upsertUserSubscription({
+      user_id: userSubscription.user_id,
+      subscription_status: 'active'
+    });
+
+    console.log(`Payment processed for user ${userSubscription.user_id}`);
+
+  } catch (error) {
+    console.error('Error handling payment succeeded:', error);
+  }
+}
+
+async function handlePaymentFailed(invoice: Stripe.Invoice) {
+  try {
+    console.log('Payment failed for invoice:', invoice.id);
+
+    if (!(invoice as any).subscription || typeof (invoice as any).subscription !== 'string') {
+      return; // Not a subscription payment
+    }
+
+    const customerId = invoice.customer as string;
+    const userSubscription = await subscriptionService.getSubscriptionByStripeCustomerId(customerId);
+
+    if (!userSubscription) {
+      console.error('User subscription not found for customer:', customerId);
+      return;
+    }
+
+    // Mark subscription as expired after failed payment
+    await subscriptionService.upsertUserSubscription({
+      user_id: userSubscription.user_id,
+      subscription_status: 'expired'
+    });
+
+    console.log(`Payment failed for user ${userSubscription.user_id}, subscription marked as expired`);
+
+  } catch (error) {
+    console.error('Error handling payment failed:', error);
+  }
+}
+
+function getSubscriptionType(priceId?: string): 'monthly' | 'annual' {
+  // Map your Stripe price IDs to subscription types
+  const monthlyPriceIds = [
+    'price_1S4WlwAUgweEW9eMOjeZmqdd', // Monthly price ID
+    // Add other monthly price IDs if you have multiple
+  ];
+  
+  const annualPriceIds = [
+    'price_1S4WlwAUgweEW9eMiepCbYMv', // Annual price ID
+    // Add other annual price IDs if you have multiple
+  ];
+
+  if (priceId && annualPriceIds.includes(priceId)) {
+    return 'annual';
+  }
+  
+  return 'monthly'; // Default to monthly
+}

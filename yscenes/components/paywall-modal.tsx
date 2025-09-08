@@ -15,11 +15,49 @@ export default function PaywallModal({ isOpen, onClose, onUpgrade }: PaywallModa
 
   if (!isOpen) return null;
 
-  const handleUpgrade = () => {
-    const checkoutUrl = isAnnual 
-      ? "https://buy.stripe.com/9B614m2Kw8hy6ZcdJFbbG00" 
-      : "https://buy.stripe.com/aFa8wO5WI9lC3N07lhbbG01";
-    window.open(checkoutUrl, '_blank');
+  const handleUpgrade = async () => {
+    try {
+      const email = user?.emailAddresses?.[0]?.emailAddress;
+      
+      if (!email) {
+        alert('Please sign in to upgrade');
+        return;
+      }
+
+      // Stripe price IDs for monthly and annual subscriptions
+      const priceId = isAnnual 
+        ? "price_1S4WlwAUgweEW9eMiepCbYMv" // Annual price ID
+        : "price_1S4WlwAUgweEW9eMOjeZmqdd"; // Monthly price ID
+
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId,
+          email,
+          successUrl: `${window.location.origin}/upgrade/success`,
+          cancelUrl: `${window.location.origin}/upgrade`
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      
+      if (url) {
+        window.location.href = url; // Redirect to Stripe checkout
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      alert('Failed to start checkout. Please try again.');
+    }
+    
     onUpgrade();
   };
 

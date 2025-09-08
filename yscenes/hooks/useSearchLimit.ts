@@ -9,8 +9,13 @@ interface SearchLimitInfo {
   canSearch: boolean;
 }
 
+interface SubscriptionInfo {
+  isVip: boolean;
+  hasActiveSubscription: boolean;
+  subscription: any;
+}
+
 const FREE_SEARCH_LIMIT = 1;
-const VIP_EMAIL = 'pgtherealmvp@gmail.com';
 
 export function useSearchLimit() {
   const { user, isSignedIn } = useUser();
@@ -19,11 +24,64 @@ export function useSearchLimit() {
     isLimitReached: false,
     canSearch: true
   });
+  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo>({
+    isVip: false,
+    hasActiveSubscription: false,
+    subscription: null
+  });
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+
+  // Check subscription status from API
+  const checkSubscriptionStatus = useCallback(async () => {
+    if (!isSignedIn || !user) {
+      setSubscriptionInfo({
+        isVip: false,
+        hasActiveSubscription: false,
+        subscription: null
+      });
+      return;
+    }
+
+    setSubscriptionLoading(true);
+    try {
+      const email = user.emailAddresses?.[0]?.emailAddress;
+      const response = await fetch(`/api/subscription/check?email=${encodeURIComponent(email || '')}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionInfo({
+          isVip: data.isVip,
+          hasActiveSubscription: data.hasActiveSubscription,
+          subscription: data.subscription
+        });
+      } else {
+        // Fallback to hardcoded VIP check for existing user
+        const isVip = email === 'pgtherealmvp@gmail.com';
+        setSubscriptionInfo({
+          isVip,
+          hasActiveSubscription: isVip,
+          subscription: null
+        });
+      }
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+      // Fallback to hardcoded VIP check
+      const email = user.emailAddresses?.[0]?.emailAddress;
+      const isVip = email === 'pgtherealmvp@gmail.com';
+      setSubscriptionInfo({
+        isVip,
+        hasActiveSubscription: isVip,
+        subscription: null
+      });
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  }, [user, isSignedIn]);
 
   // Check if user is VIP (unlimited searches)
   const isVipUser = useCallback(() => {
-    return user?.emailAddresses?.[0]?.emailAddress === VIP_EMAIL;
-  }, [user]);
+    return subscriptionInfo.isVip;
+  }, [subscriptionInfo.isVip]);
 
   // Get storage key for current user
   const getStorageKey = useCallback(() => {
@@ -83,16 +141,21 @@ export function useSearchLimit() {
     });
   }, [getStorageKey]);
 
-  // Load search count on mount and when user changes
+  // Load search count and subscription status on mount and when user changes
   useEffect(() => {
     loadSearchCount();
-  }, [loadSearchCount]);
+    checkSubscriptionStatus();
+  }, [loadSearchCount, checkSubscriptionStatus]);
 
   return {
     ...searchLimitInfo,
     isVipUser: isVipUser(),
+    hasActiveSubscription: subscriptionInfo.hasActiveSubscription,
+    subscription: subscriptionInfo.subscription,
+    subscriptionLoading,
     incrementSearchCount,
     resetSearchCount,
-    loadSearchCount
+    loadSearchCount,
+    checkSubscriptionStatus
   };
 }

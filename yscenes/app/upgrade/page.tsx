@@ -27,11 +27,37 @@ export default function UpgradePage() {
     };
   }, []);
 
-  const handleStartTrial = () => {
-    const checkoutUrl = isAnnual 
-      ? "https://buy.stripe.com/9B614m2Kw8hy6ZcdJFbbG00" 
-      : "https://buy.stripe.com/aFa8wO5WI9lC3N07lhbbG01";
-    window.open(checkoutUrl, '_blank');
+  const handleStartTrial = async () => {
+    try {
+      // Use the new checkout session API instead of direct Stripe links
+      const priceId = isAnnual 
+        ? "price_1S4WlwAUgweEW9eMiepCbYMv" // Annual price ID
+        : "price_1S4WlwAUgweEW9eMOjeZmqdd"; // Monthly price ID
+
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId,
+          email: 'user@example.com', // This should be replaced with actual user email
+          successUrl: `${window.location.origin}/upgrade/success`,
+          cancelUrl: `${window.location.origin}/upgrade`
+        }),
+      });
+
+      if (response.ok) {
+        const { url } = await response.json();
+        if (url) {
+          window.location.href = url;
+        }
+      } else {
+        console.error('Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+    }
   };
 
   return (
