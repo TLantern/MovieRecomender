@@ -468,7 +468,7 @@ export default function Home() {
                 <div className="flex justify-center mb-8">
                   <div className="flex flex-col items-center w-full">
                     <h1 className="text-white text-lg font-body font-bold drop-shadow-[0_0_20px_rgba(59,130,246,0.5)] -mb-5 mt-6">
-                      Compare your Top 2 with your friends, who wins?                    
+                      Compare your Top 3 with your friends, who wins?                    
                       </h1>
                     <SocialsButton movies={searchResults} mood={currentMood} username="MovieLover" />
                   </div>
@@ -482,6 +482,7 @@ export default function Home() {
                     return (
                       <div 
                         key={index} 
+                        onClick={() => handleWatchClick(movie)}
                         className={`bg-black/85 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/30 relative flex-1 max-w-md transition-all duration-300 ease-out cursor-pointer ${
                           isMasterpiece 
                             ? 'drop-shadow-[0_0_40px_rgba(147,51,234,0.4)] hover:drop-shadow-[0_0_50px_rgba(147,51,234,0.6)] hover:scale-105 hover:border-purple-400/50' 
@@ -501,7 +502,7 @@ export default function Home() {
                         )}
                         
                         {/* Bookmark - Top left corner */}
-                        <div className="absolute top-3 left-3 z-20">
+                        <div className="absolute top-3 left-3 z-20" onClick={(e) => e.stopPropagation()}>
                           <Bookmark
                             movieId={`${movie.title}-${movie.year}`}
                             title={movie.title}
@@ -550,7 +551,10 @@ export default function Home() {
                           
                           {/* Watch button */}
                           <button
-                            onClick={() => handleWatchClick(movie)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleWatchClick(movie);
+                            }}
                             className="text-blue-500 hover:text-blue-400 transition-colors duration-200 mt-auto text-center font-medium hover:scale-105 transform transition-transform cursor-pointer bg-transparent border-none"
                           >
                             ▶️ Watch here

@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
       console.log('Backend unavailable, using instant fallback');
       source = 'fallback';
       
-      // Return instant fallback movies from around 2000 (only 2 movies for no-filter searches)
+      // Return instant fallback movies from around 2000 (always 3 movies)
       const fastFallback = [
         {
           title: "Gladiator",
@@ -232,6 +232,15 @@ export async function POST(request: NextRequest) {
           year: 2000,
           description: "A teenager writes for Rolling Stone magazine while touring with an up-and-coming rock band.",
           rating_out_of_10: 7.9,
+          stars: "★★★★☆",
+          stream_link: "https://www.netflix.com",
+          poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+        },
+        {
+          title: "Cast Away",
+          year: 2000,
+          description: "A FedEx executive becomes stranded on a deserted island after his plane crashes in the South Pacific.",
+          rating_out_of_10: 7.8,
           stars: "★★★★☆",
           stream_link: "https://www.netflix.com",
           poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
@@ -303,8 +312,8 @@ export async function POST(request: NextRequest) {
       return true; // Default to accepting
     };
 
-    // Only enrich first 6 movies to save time - we only need 3 final results
-    const moviesToProcess = data.movies.slice(0, 6);
+    // Only enrich first 9 movies to save time - we need 3 final results
+    const moviesToProcess = data.movies.slice(0, 9);
     const processedCount = moviesToProcess.length;
     
     // Parallel transform with timeout for TMDB calls
@@ -372,20 +381,20 @@ export async function POST(request: NextRequest) {
         const { _tmdb, ...movieData } = movie;
         filteredMovies.push(movieData);
         
-        // Early exit once we have 2 movies to save time (for year 2000 style searches)
-        if (filteredMovies.length >= 2) {
+        // Early exit once we have 3 movies to save time
+        if (filteredMovies.length >= 3) {
           break;
         }
       }
     }
 
     // Since we fetched multiple batches, we should have enough valid movies
-    // Take the first 2 that match all criteria (year 2000 style)
-    let finalMovies = filteredMovies.slice(0, 2);
+    // Take the first 3 that match all criteria
+    let finalMovies = filteredMovies.slice(0, 3);
     
-    // Fast fallback - just take any available movies to reach 2
-    if (finalMovies.length < 2) {
-      console.log(`Only ${finalMovies.length} movies passed filters, padding with available movies...`);
+    // Fast fallback - just take any available movies to reach exactly 3
+    if (finalMovies.length < 3) {
+      console.log(`Only ${finalMovies.length} movies passed filters, padding with available movies to reach 3...`);
       
       const remainingMovies = enrichedMovies
         .filter(movie => 
@@ -395,9 +404,45 @@ export async function POST(request: NextRequest) {
           const { _tmdb, ...movieData } = movie;
           return movieData;
         })
-        .slice(0, 2 - finalMovies.length);
+        .slice(0, 3 - finalMovies.length);
       
       finalMovies.push(...remainingMovies);
+      
+      // If we still don't have 3 movies, use additional fallback movies
+      if (finalMovies.length < 3) {
+        const additionalFallback = [
+          {
+            title: "The Shawshank Redemption",
+            year: 1994,
+            description: "Two imprisoned men bond over years, finding solace and eventual redemption through acts of common decency.",
+            rating_out_of_10: 9.3,
+            stars: "★★★★★",
+            stream_link: "https://www.netflix.com",
+            poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+          },
+          {
+            title: "Pulp Fiction",
+            year: 1994,
+            description: "The lives of two mob hitmen, a boxer, a gangster and his wife intertwine in four tales of violence and redemption.",
+            rating_out_of_10: 8.9,
+            stars: "★★★★★",
+            stream_link: "https://www.netflix.com",
+            poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+          },
+          {
+            title: "Forrest Gump",
+            year: 1994,
+            description: "The presidencies of Kennedy and Johnson through the eyes of an Alabama man with an IQ of 75.",
+            rating_out_of_10: 8.8,
+            stars: "★★★★★",
+            stream_link: "https://www.netflix.com",
+            poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+          }
+        ];
+        
+        const neededCount = 3 - finalMovies.length;
+        finalMovies.push(...additionalFallback.slice(0, neededCount));
+      }
     }
 
     // Log the recommendation results
