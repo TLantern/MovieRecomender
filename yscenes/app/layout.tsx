@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat, Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
@@ -20,8 +20,12 @@ export const metadata: Metadata = {
   description: "Discover your next favorite movie with AI-powered recommendations based on your mood. Get personalized film suggestions in seconds.",
   keywords: ["movies", "recommendations", "AI", "film", "entertainment", "streaming"],
   authors: [{ name: "YScenes" }],
-  viewport: "width=device-width, initial-scale=1",
   robots: "index, follow",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

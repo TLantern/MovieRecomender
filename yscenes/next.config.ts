@@ -28,7 +28,6 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   compress: true,
-  swcMinify: true,
 };
 
 export default nextConfig;
