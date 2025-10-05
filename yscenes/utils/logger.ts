@@ -17,7 +17,7 @@ interface RecommendationLog {
   mood: string;
   yearRange: [number, number];
   movies: MovieRecommendation[];
-  source: 'backend' | 'fallback';
+  source: 'backend' | 'fallback' | 'openai';
   backendAvailable: boolean;
 }
 
@@ -80,7 +80,7 @@ export class RecommendationLogger {
     movies: MovieRecommendation[],
     sessionId?: string,
     backendAvailable: boolean = true,
-    source: 'backend' | 'fallback' = 'backend'
+    source: 'backend' | 'fallback' | 'openai' = 'openai'
   ): Promise<void> {
     try {
       const logEntry: RecommendationLog = {
@@ -258,7 +258,7 @@ export class RecommendationLogger {
     totalRecommendations: number;
     totalMovies: number;
     moods: Record<string, number>;
-    backendUsage: { backend: number; fallback: number };
+    backendUsage: { backend: number; fallback: number; openai: number };
     duplicateDetection: {
       totalUniqueTitles: number;
       totalDuplicateTitles: number;
@@ -273,7 +273,7 @@ export class RecommendationLogger {
           totalRecommendations: 0,
           totalMovies: 0,
           moods: {},
-          backendUsage: { backend: 0, fallback: 0 },
+          backendUsage: { backend: 0, fallback: 0, openai: 0 },
           duplicateDetection: {
             totalUniqueTitles: 0,
             totalDuplicateTitles: 0,
@@ -289,7 +289,7 @@ export class RecommendationLogger {
       let totalRecommendations = 0;
       let totalMovies = 0;
       const moods: Record<string, number> = {};
-      const backendUsage = { backend: 0, fallback: 0 };
+      const backendUsage = { backend: 0, fallback: 0, openai: 0 };
       const allTitles: string[] = [];
       const titleCounts: Record<string, number> = {};
 
@@ -341,7 +341,7 @@ export class RecommendationLogger {
         totalRecommendations: 0,
         totalMovies: 0,
         moods: {},
-        backendUsage: { backend: 0, fallback: 0 },
+        backendUsage: { backend: 0, fallback: 0, openai: 0 },
         duplicateDetection: {
           totalUniqueTitles: 0,
           totalDuplicateTitles: 0,
