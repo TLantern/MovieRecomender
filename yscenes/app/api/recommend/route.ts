@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { recommendationLogger } from '../../../utils/logger';
 
-const API_BASE = process.env.API_BASE_URL || "https://movierecomender.onrender.com";
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 // In-memory cache for TMDB data with TTL
@@ -122,7 +122,124 @@ async function getTMDBData(title: string, year: number): Promise<{
     console.error('TMDB data fetch error:', error);
     const result = { posterUrl: null, movieData: null, cast: null, genres: null, rating: null };
     setCachedData(cacheKey, result); // Cache errors to prevent retries
-    return result;
+  }
+}
+
+// Function to get movie recommendations from OpenAI
+async function getMovieRecommendationsFromOpenAI(
+  mood: string,
+  yearRange: [number, number],
+  actor: string | null,
+  excludeMovies: any[],
+  isFirstRecommendation: boolean,
+  sessionSeed: number
+): Promise<any[]> {
+  if (!OPENAI_API_KEY) {
+    throw new Error('OpenAI API key not configured');
+  }
+
+  // Build exclusion list for the prompt
+  let excludeText = "";
+  if (excludeMovies.length > 0) {
+    excludeText = `\n\nDO NOT recommend these movies (they were already suggested):\n`;
+    for (const movie of excludeMovies) {
+      excludeText += `- ${movie.title || 'Unknown'} (${movie.year || 'Unknown'})\n`;
+    }
+  }
+
+  // Add session-specific randomization to the prompt
+  const randomAdjectives = [
+    "underrated", "overlooked", "cult classic", "indie gem", 
+    "foreign masterpiece", "arthouse", "experimental", "avant-garde",
+    "hidden treasure", "sleeper hit", "undiscovered gem", "cult favorite"
+  ];
+  
+  // Use session seed for consistent randomization
+  const adjIndex = sessionSeed % randomAdjectives.length;
+  const randomAdjective = randomAdjectives[adjIndex];
+
+  let prompt;
+  if (isFirstRecommendation) {
+    // Enhanced system prompt for first recommendation
+    prompt = `You are an expert movie curator with deep knowledge of cinema across all eras and genres. Your mission: recommend exactly 3 movies that perfectly match the user's specific mood and preferences.
+
+USER REQUEST: "${mood}"
+YEAR RANGE: ${yearRange[0]}-${yearRange[1]}
+ACTOR PREFERENCE: ${actor || 'None specified'}
+
+REQUIREMENTS:
+• Movies MUST be from ${yearRange[0]}-${yearRange[1]}
+• If actor specified, ALL movies must feature that actor prominently
+• Match the mood/genre perfectly - be precise about emotional tone
+• Include a mix: 1 popular/acclaimed film + 2 hidden gems or cult favorites
+• Avoid generic blockbusters unless they truly fit the mood
+• Descriptions should be vivid and capture why it matches their mood
+
+CRITICAL: DO NOT recommend these already-suggested movies:${excludeText}
+
+Return ONLY valid JSON in this exact format:
+{ "movies": [
+  { "title": "Movie Title", "year": YYYY, "description": "Compelling 1-2 sentence description explaining why this perfectly matches their mood" },
+  { "title": "Movie Title", "year": YYYY, "description": "Compelling 1-2 sentence description explaining why this perfectly matches their mood" },
+  { "title": "Movie Title", "year": YYYY, "description": "Compelling 1-2 sentence description explaining why this perfectly matches their mood" }
+] }`;
+  } else {
+    // Enhanced prompt for additional recommendations
+    prompt = `You are a cinema expert specializing in discovering ${randomAdjective} films. The user wants MORE movies that match their mood, so focus on deeper cuts and hidden gems.
+
+USER REQUEST: "${mood}"
+YEAR RANGE: ${yearRange[0]}-${yearRange[1]}
+ACTOR PREFERENCE: ${actor || 'None specified'}
+
+REQUIREMENTS:
+• Movies MUST be from ${yearRange[0]}-${yearRange[1]}
+• If actor specified, ALL movies must feature that actor
+• Focus on lesser-known films, international cinema, or cult classics
+• Avoid mainstream hits - they want discoveries
+• Each description should highlight what makes it special
+
+CRITICAL: DO NOT recommend these already-suggested movies:${excludeText}
+
+Return ONLY valid JSON in this exact format:
+{ "movies": [
+  { "title": "Movie Title", "year": YYYY, "description": "Why this hidden gem perfectly captures their mood" },
+  { "title": "Movie Title", "year": YYYY, "description": "Why this hidden gem perfectly captures their mood" },
+  { "title": "Movie Title", "year": YYYY, "description": "Why this hidden gem perfectly captures their mood" }
+] }`;
+  }
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 1000
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices[0]?.message?.content;
+
+  if (!content) {
+    throw new Error('No content received from OpenAI');
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    return parsed.movies || [];
+  } catch (error) {
+    console.error('Failed to parse OpenAI response:', content);
+    throw new Error('Invalid JSON response from OpenAI');
   }
 }
 
@@ -153,101 +270,76 @@ export async function POST(request: NextRequest) {
     const allExcludeMovies = [...excludeMovies];
     console.log(`Excluding ${excludeMovies.length} titles from current session to prevent duplicates`);
 
-    // Aggressive single-call backend fetch with timeout
-    const fetchMoviesUntilValid = async (): Promise<{ movies: any[], backendAvailable: boolean, source: 'backend' | 'fallback' }> => {
-      try {
-        // Single backend call with aggressive timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-        
-        const response = await fetch(`${API_BASE}/recommend`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            mood,
-            yearRange: {
-              min: yearRange[0],
-              max: yearRange[1]
-            },
-            actor,
-            excludeMovies: allExcludeMovies,
-            isFirstRecommendation,
-            sessionSeed
-          }),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`Backend API failed: ${response.status}`);
-        }
-
-        const batchData = await response.json();
-        
-        return {
-          movies: batchData.movies || [],
-          backendAvailable: true,
-          source: 'backend'
-        };
-        
-      } catch (error: any) {
-        console.log(`Backend took >30 seconds (timeout), switching to instant fallback for better UX:`, error?.name || 'Unknown error');
-        return {
-          movies: [],
-          backendAvailable: false,
-          source: 'fallback'
-        };
-      }
-    };
-
-    // Try to get movies from backend with retries
-    let data;
-    let backendAvailable = true;
-    let source: 'backend' | 'fallback' = 'backend';
+    // Get movie recommendations directly from OpenAI
+    let movies: any[] = [];
+    let source: 'openai' | 'fallback' = 'openai';
     
-    const fetchResult = await fetchMoviesUntilValid();
-    data = { movies: fetchResult.movies };
-    backendAvailable = fetchResult.backendAvailable;
-    source = fetchResult.source;
-    
-    // Instant fallback when backend is unavailable
-    if (!backendAvailable) {
-      console.log('Backend unavailable, using instant fallback');
+    try {
+      movies = await getMovieRecommendationsFromOpenAI(
+        mood,
+        yearRange as [number, number],
+        actor,
+        allExcludeMovies,
+        isFirstRecommendation,
+        sessionSeed
+      );
+      console.log(`Got ${movies.length} movies from OpenAI`);
+    } catch (error: any) {
+      console.error('OpenAI API failed:', error.message);
       source = 'fallback';
       
-      // Return instant fallback movies from around 2000 (always 3 movies)
-      const fastFallback = [
+      // Fallback to diversified hardcoded movies with randomization
+      const fallbackMovies = [
         {
-          title: "Gladiator",
-          year: 2000,
-          description: "A former Roman general seeks revenge against the corrupt emperor who murdered his family.",
-          rating_out_of_10: 8.5,
-          stars: "★★★★☆",
-          stream_link: "https://www.netflix.com",
-          poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+          title: "The Shawshank Redemption",
+          year: 1994,
+          description: "Two imprisoned men bond over years, finding solace and eventual redemption through acts of common decency."
         },
         {
-          title: "Almost Famous", 
-          year: 2000,
-          description: "A teenager writes for Rolling Stone magazine while touring with an up-and-coming rock band.",
-          rating_out_of_10: 7.9,
-          stars: "★★★★☆",
-          stream_link: "https://www.netflix.com",
-          poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+          title: "Pulp Fiction",
+          year: 1994,
+          description: "The lives of two mob hitmen, a boxer, a gangster and his wife intertwine in four tales of violence and redemption."
         },
         {
-          title: "Cast Away",
-          year: 2000,
-          description: "A FedEx executive becomes stranded on a deserted island after his plane crashes in the South Pacific.",
-          rating_out_of_10: 7.8,
-          stars: "★★★★☆",
-          stream_link: "https://www.netflix.com",
-          poster_url: "https://images.unsplash.com/photo-1624138784729-537e99f71d08?w=400&h=600&fit=crop"
+          title: "Forrest Gump",
+          year: 1994,
+          description: "The presidencies of Kennedy and Johnson through the eyes of an Alabama man with an IQ of 75."
+        },
+        {
+          title: "Goodfellas",
+          year: 1990,
+          description: "The story of Henry Hill and his life in the mob, covering his relationship with his wife Karen Hill and his mob partners."
+        },
+        {
+          title: "The Matrix",
+          year: 1999,
+          description: "A computer hacker learns from mysterious rebels about the true nature of his reality and his role in the war against its controllers."
+        },
+        {
+          title: "Fight Club",
+          year: 1999,
+          description: "An insomniac office worker and a devil-may-care soapmaker form an underground fight club."
+        },
+        {
+          title: "The Dark Knight",
+          year: 2008,
+          description: "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests."
+        },
+        {
+          title: "Inception",
+          year: 2010,
+          description: "A thief who steals corporate secrets through dream-sharing technology is given the inverse task of planting an idea."
         }
       ];
       
-      data = { movies: fastFallback };
+      // Use session seed for consistent randomization
+      const shuffled = [...fallbackMovies];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = (sessionSeed + i) % (i + 1);
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      
+      movies = shuffled.slice(0, 3);
     }
     
     // Helper function to check if movie matches actor filter using pre-fetched data
@@ -312,8 +404,8 @@ export async function POST(request: NextRequest) {
       return true; // Default to accepting
     };
 
-    // Only enrich first 9 movies to save time - we need 3 final results
-    const moviesToProcess = data.movies.slice(0, 9);
+    // Only enrich first 3 movies to save time
+    const moviesToProcess = movies.slice(0, 3);
     const processedCount = moviesToProcess.length;
     
     // Parallel transform with timeout for TMDB calls
@@ -451,7 +543,7 @@ export async function POST(request: NextRequest) {
       yearRange as [number, number],
       finalMovies,
       sessionId,
-      backendAvailable,
+      source === 'openai',
       source
     );
 
