@@ -16,3 +16,4 @@ curl -i -X POST http://127.0.0.1:8000/recommend \  -H "Content-Type: application
 
 3.**Deploy Vercel**
 vercel deploy
+# Trigger deployment
