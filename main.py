@@ -1,5 +1,5 @@
+from typing import Optional
 import json
-from json import JSONDecodeError
 import os
 import random
 import requests
@@ -49,10 +49,10 @@ class YearRange(BaseModel):
 class RecommendRequest(BaseModel):
     mood: str
     yearRange: YearRange
-    actor: str = None  # Optional actor preference
+    actor: Optional[str] = None  # Optional actor preference
     excludeMovies: list = []  # List of movies to exclude
     isFirstRecommendation: bool = False  # Flag for fan favourites
-    sessionSeed: int = None  # Session seed for consistent randomization
+    sessionSeed: Optional[int] = None  # Session seed for consistent randomization
 
 class EmailRequest(BaseModel):
     email: str    # basic validation by Pydantic; use constr/email if stricter
@@ -254,7 +254,7 @@ async def recommend(req: RecommendRequest):
 
     try:
         parsed = json.loads(content)
-    except JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         raise HTTPException(status_code=500, detail=f"Invalid JSON from GPT: {e.msg}")
 
     movies = parsed.get("movies")
