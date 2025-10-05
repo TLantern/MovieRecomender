@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from openai import ChatCompletion
+from openai import OpenAI
 
 # Load environment variables from .env file
 load_dotenv(verbose=True)
@@ -30,8 +30,7 @@ if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY environment variable is required")
 
 # Set OpenAI API key for the library
-import openai
-openai.api_key = OPENAI_API_KEY
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # CORS settings
 app.add_middleware(
@@ -246,10 +245,10 @@ async def recommend(req: RecommendRequest):
             '] }'
         )
 
-    resp = ChatCompletion.create(
-        model="gpt-5-nano",
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
-        # GPT-5 Nano uses default temperature (1) only
+        temperature=0.7
     )
     content = resp.choices[0].message.content
 
