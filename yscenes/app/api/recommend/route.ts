@@ -122,6 +122,7 @@ async function getTMDBData(title: string, year: number): Promise<{
     console.error('TMDB data fetch error:', error);
     const result = { posterUrl: null, movieData: null, cast: null, genres: null, rating: null };
     setCachedData(cacheKey, result); // Cache errors to prevent retries
+    return result;
   }
 }
 
