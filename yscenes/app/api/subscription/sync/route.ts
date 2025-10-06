@@ -34,11 +34,11 @@ export async function POST(request: NextRequest) {
     const priceId = subscription.items.data[0]?.price.id;
     const subscriptionType = getSubscriptionType(priceId);
 
-    const startIso = subscription.current_period_start
-      ? new Date(subscription.current_period_start * 1000).toISOString()
+    const startIso = (subscription as any).current_period_start
+      ? new Date((subscription as any).current_period_start * 1000).toISOString()
       : new Date().toISOString();
-    const endIso = subscription.current_period_end
-      ? new Date(subscription.current_period_end * 1000).toISOString()
+    const endIso = (subscription as any).current_period_end
+      ? new Date((subscription as any).current_period_end * 1000).toISOString()
       : undefined;
 
     const status: 'active' | 'cancelled' | 'expired' = subscription.status === 'canceled'
