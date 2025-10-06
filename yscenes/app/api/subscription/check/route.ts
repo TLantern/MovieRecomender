@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { subscriptionService } from '../../../../lib/subscription-service';
+import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,15 +20,41 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Get user subscription details
-    const subscription = await subscriptionService.getUserSubscription(userId);
-    const hasActiveSubscription = await subscriptionService.hasActiveSubscription(userId);
+    // Get user subscription details (DB)
+    let subscription = await subscriptionService.getUserSubscription(userId);
+    let hasActiveSubscription = await subscriptionService.hasActiveSubscription(userId);
     
     // Get email from request query params as fallback
     const url = new URL(request.url);
     const email = url.searchParams.get('email');
     
-    const isVip = await subscriptionService.isVipUser(userId, email || undefined);
+    let isVip = await subscriptionService.isVipUser(userId, email || undefined);
+
+    // Fallback: If DB not configured or no active sub found, check Stripe by email
+    if (!hasActiveSubscription && process.env.STRIPE_SECRET_KEY && (email || subscription?.stripe_customer_id)) {
+      try {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-08-27.basil' });
+        let customerId: string | undefined = subscription?.stripe_customer_id;
+        if (!customerId && email) {
+          const customers = await stripe.customers.list({ email: email || undefined, limit: 1 });
+          customerId = customers.data[0]?.id;
+        }
+        if (customerId) {
+          const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });
+          const stripeSub = subs.data[0];
+          if (stripeSub && ['active', 'trialing'].includes(stripeSub.status)) {
+            hasActiveSubscription = true;
+            isVip = true;
+            subscription = subscription || ({} as any);
+            subscription.stripe_customer_id = customerId;
+            subscription.stripe_subscription_id = stripeSub.id;
+            subscription.stripe_price_id = stripeSub.items.data[0]?.price.id;
+          }
+        }
+      } catch (e) {
+        console.warn('Stripe fallback failed in subscription check');
+      }
+    }
 
     return NextResponse.json({
       isVip,
