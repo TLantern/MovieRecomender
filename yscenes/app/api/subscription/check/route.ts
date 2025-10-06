@@ -45,10 +45,11 @@ export async function GET(request: NextRequest) {
           if (stripeSub && ['active', 'trialing'].includes(stripeSub.status)) {
             hasActiveSubscription = true;
             isVip = true;
-            subscription = subscription || ({} as any);
-            subscription.stripe_customer_id = customerId;
-            subscription.stripe_subscription_id = stripeSub.id;
-            subscription.stripe_price_id = stripeSub.items.data[0]?.price.id;
+            const subAny: any = subscription ?? {};
+            subAny.stripe_customer_id = customerId;
+            subAny.stripe_subscription_id = stripeSub.id;
+            subAny.stripe_price_id = stripeSub.items.data[0]?.price.id;
+            subscription = subAny;
           }
         }
       } catch (e) {
