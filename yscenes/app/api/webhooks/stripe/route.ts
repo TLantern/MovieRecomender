@@ -107,39 +107,60 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, stripe:
       return;
     }
 
-    // Get the subscription details from Stripe
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'active',
-      limit: 1
-    });
+    // Prefer subscription id from session; supports trialing immediately after checkout
+    let subscription: Stripe.Subscription | null = null;
+    const sessionSubId = typeof session.subscription === 'string' ? session.subscription : null;
+    if (sessionSubId) {
+      try {
+        subscription = await stripe.subscriptions.retrieve(sessionSubId);
+      } catch (e) {
+        console.error('Failed to retrieve subscription from session.subscription:', e);
+      }
+    }
 
-    if (subscriptions.data.length === 0) {
-      console.error('No active subscription found for customer');
+    // Fallback: fetch most recent subscription for customer (any status)
+    if (!subscription) {
+      const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });
+      subscription = subs.data[0] || null;
+    }
+
+    if (!subscription) {
+      console.error('No subscription found for customer after checkout');
       return;
     }
 
-    const subscription = subscriptions.data[0];
     const priceId = subscription.items.data[0]?.price.id;
     
     // Determine subscription type based on price ID
     const subscriptionType = getSubscriptionType(priceId);
 
-    // Activate the subscription in our database
-    const success = await subscriptionService.activateSubscription(
-      userId,
-      email,
-      customerId,
-      subscription.id,
-      priceId || '',
-      subscriptionType
-    );
+    // Upsert subscription in our database using Stripe period boundaries
+    const startIso = subscription.current_period_start
+      ? new Date(subscription.current_period_start * 1000).toISOString()
+      : new Date().toISOString();
+    const endIso = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000).toISOString()
+      : undefined;
 
-    if (success) {
-      console.log(`Subscription activated for user ${userId}`);
-    } else {
-      console.error(`Failed to activate subscription for user ${userId}`);
-    }
+    const status: 'active' | 'cancelled' | 'expired' = subscription.status === 'canceled'
+      ? 'cancelled'
+      : (subscription.status === 'unpaid' || subscription.status === 'past_due')
+        ? 'expired'
+        : 'active'; // treat trialing as active for access
+
+    await subscriptionService.upsertUserSubscription({
+      user_id: userId,
+      email,
+      subscription_status: status,
+      subscription_type: subscriptionType,
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscription.id,
+      stripe_price_id: priceId,
+      subscription_start_date: startIso,
+      subscription_end_date: endIso,
+    });
+
+    console.log(`Subscription upserted for user ${userId} with status ${status}`);
 
   } catch (error) {
     console.error('Error handling checkout completed:', error);
