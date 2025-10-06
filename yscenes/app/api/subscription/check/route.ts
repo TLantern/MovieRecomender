@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await currentUser();
+    const user = await currentUser().catch(() => null as any);
     const userId = user?.id;
     
     if (!userId) {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await currentUser();
+    const user = await currentUser().catch(() => null as any);
     const userId = user?.id;
     
     if (!userId) {

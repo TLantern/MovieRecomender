@@ -78,10 +78,10 @@ export function useSearchLimit() {
     }
   }, [user, isSignedIn]);
 
-  // Check if user is VIP (unlimited searches)
+  // Unlimited if VIP or has an active subscription
   const isVipUser = useCallback(() => {
-    return subscriptionInfo.isVip;
-  }, [subscriptionInfo.isVip]);
+    return subscriptionInfo.isVip || subscriptionInfo.hasActiveSubscription;
+  }, [subscriptionInfo.isVip, subscriptionInfo.hasActiveSubscription]);
 
   // Get storage key for current user
   const getStorageKey = useCallback(() => {
