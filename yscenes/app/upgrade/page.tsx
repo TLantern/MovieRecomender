@@ -159,12 +159,14 @@ export default function UpgradePage() {
               </div>
               
               {/* Start Trial Button */}
-              <button 
-                onClick={handleStartTrial}
-                className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all duration-200 hover:scale-105 font-bold shadow-lg text-lg mb-3"
-              >
-                Start FREE Trial Now
-              </button>
+              <form action="https://buy.stripe.com/aFa8wO5WI9lC3N07lhbbG01" method="GET" target="_blank">
+                <button
+                  type="submit"
+                  className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all duration-200 hover:scale-105 font-bold shadow-lg text-lg mb-3"
+                >
+                  Start FREE Trial Now
+                </button>
+              </form>
 
               {/* Live Signup Count */}
               <div className="flex items-center justify-center space-x-2 mb-4">

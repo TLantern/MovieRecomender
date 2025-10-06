@@ -25,6 +25,7 @@ export class SubscriptionService {
   // Check if user has active subscription
   async hasActiveSubscription(userId: string): Promise<boolean> {
     try {
+      if (!this.supabase) return false;
       const { data, error } = await this.supabase
         .from('user_subscriptions')
         .select('subscription_status, subscription_end_date')
@@ -54,6 +55,7 @@ export class SubscriptionService {
   // Get user subscription details
   async getUserSubscription(userId: string): Promise<UserSubscription | null> {
     try {
+      if (!this.supabase) return null;
       const { data, error } = await this.supabase
         .from('user_subscriptions')
         .select('*')
@@ -74,6 +76,7 @@ export class SubscriptionService {
   // Create or update user subscription
   async upsertUserSubscription(subscriptionData: Partial<UserSubscription>): Promise<UserSubscription | null> {
     try {
+      if (!this.supabase) return null;
       const { data, error } = await this.supabase
         .from('user_subscriptions')
         .upsert(subscriptionData, {
@@ -137,6 +140,7 @@ export class SubscriptionService {
   // Cancel subscription
   async cancelSubscription(userId: string): Promise<boolean> {
     try {
+      if (!this.supabase) return false;
       const { error } = await this.supabase
         .from('user_subscriptions')
         .update({ 
@@ -155,6 +159,7 @@ export class SubscriptionService {
   // Get subscription by Stripe customer ID (for webhooks)
   async getSubscriptionByStripeCustomerId(customerId: string): Promise<UserSubscription | null> {
     try {
+      if (!this.supabase) return null;
       const { data, error } = await this.supabase
         .from('user_subscriptions')
         .select('*')
@@ -191,6 +196,7 @@ export class SubscriptionService {
   // Update subscription end date (for renewals)
   async renewSubscription(userId: string, subscriptionType: 'monthly' | 'annual'): Promise<boolean> {
     try {
+      if (!this.supabase) return false;
       const currentSubscription = await this.getUserSubscription(userId);
       if (!currentSubscription) {
         return false;
