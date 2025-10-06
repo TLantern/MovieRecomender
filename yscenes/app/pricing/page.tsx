@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '../../components/navbar';
+import { useSearchLimit } from '../../hooks/useSearchLimit';
 
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
+  const { hasActiveSubscription, subscriptionLoading, checkSubscriptionStatus } = useSearchLimit();
+  useEffect(() => { checkSubscriptionStatus(); }, [checkSubscriptionStatus]);
 
   const features = {
     pro: [
@@ -102,17 +105,40 @@ export default function PricingPage() {
                   ))}
                 </ul>
                 
-                <a 
-                  href={isAnnual 
-                    ? "https://buy.stripe.com/9B614m2Kw8hy6ZcdJFbbG00" 
-                    : "https://buy.stripe.com/aFa8wO5WI9lC3N07lhbbG01"
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 px-6 bg-white border-2 border-white text-black rounded-lg hover:bg-black hover:text-white transition-all duration-200 hover:scale-105 font-medium shadow-lg inline-block text-center mt-auto"
-                >
-                  Start for free
-                </a>
+                {!hasActiveSubscription ? (
+                  <a 
+                    href={isAnnual 
+                      ? "https://buy.stripe.com/9B614m2Kw8hy6ZcdJFbbG00" 
+                      : "https://buy.stripe.com/aFa8wO5WI9lC3N07lhbbG01"
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-6 bg-white border-2 border-white text-black rounded-lg hover:bg-black hover:text-white transition-all duration-200 hover:scale-105 font-medium shadow-lg inline-block text-center mt-auto"
+                  >
+                    Start for free
+                  </a>
+                ) : (
+                  <button
+                    disabled={subscriptionLoading}
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/subscription/cancel', { method: 'POST' });
+                        if (res.ok) {
+                          await checkSubscriptionStatus();
+                          alert('Subscription cancelled');
+                        } else {
+                          const body = await res.json().catch(() => ({}));
+                          alert(body.error || 'Failed to cancel');
+                        }
+                      } catch (e) {
+                        alert('Failed to cancel');
+                      }
+                    }}
+                    className="w-full py-3 px-6 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 hover:scale-105 font-medium shadow-lg inline-block text-center mt-auto"
+                  >
+                    Cancel subscription
+                  </button>
+                )}
               </div>
             </div>
           </div>

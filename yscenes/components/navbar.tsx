@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchLimit } from '../hooks/useSearchLimit';
 import Link from 'next/link';
 import Image from 'next/image';
 import { SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
@@ -13,6 +14,9 @@ interface NavbarProps {
 
 export default function Navbar({ searchCount = 0, isVipUser = false, canSearch = true }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isVipUser: hookIsVipUser, searchCount: hookSearchCount } = useSearchLimit();
+  const vip = isVipUser || hookIsVipUser;
+  const count = searchCount ?? hookSearchCount;
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -74,12 +78,12 @@ export default function Navbar({ searchCount = 0, isVipUser = false, canSearch =
           {/* Authentication Buttons - Right side */}
           <div className="absolute right-4 sm:right-6 lg:right-8 flex items-center space-x-3">
             {/* Search Limit Indicator */}
-            {!isVipUser && (
+            {!vip && (
               <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 border border-purple-500/30">
                 <div className="text-center">
                   <div className="text-purple-300 text-xs font-medium">
-                    {searchCount === 0 ? '🎬 1 Free' : 
-                     searchCount === 1 ? '⚠️ Used' : 
+                    {count === 0 ? '🎬 1 Free' : 
+                     count === 1 ? '⚠️ Used' : 
                      '🔒 Upgrade'}
                   </div>
                 </div>
@@ -87,11 +91,11 @@ export default function Navbar({ searchCount = 0, isVipUser = false, canSearch =
             )}
 
             {/* VIP User Indicator */}
-            {isVipUser && (
+            {vip && (
               <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 backdrop-blur-sm rounded-lg px-3 py-2 border border-purple-500/50">
                 <div className="text-center">
                   <div className="text-purple-300 text-xs font-medium">
-                    🎉 VIP
+                    ♾️ Unlimited
                   </div>
                 </div>
               </div>
